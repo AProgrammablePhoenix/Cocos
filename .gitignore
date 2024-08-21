@@ -1,0 +1,9 @@
+.vscode/
+acpi/
+ImageTools/
+/*.txt
+/*.py
+*.EFI
+*.exe
+**/objects/
+**/lib
