@@ -77,6 +77,7 @@ extern void register_irq(unsigned int irq_line, void(*handler)(void), unsigned i
 }
 
 extern void initialize_pic(void);
+extern void mask_irq(uint64_t irq_line);
 extern void PIT_IRQ0_handler(void);
 extern void initialize_pit(void);
 extern int32_t initialize_ps2_controller(void);
@@ -122,12 +123,15 @@ void kmain() {
 
     if ((status = initialize_ps2_controller()) != 0) {
         tty_puts("PS/2 Controller initialization failed.\n\r");
+        mask_irq(1);
     }
+    else {
+        tty_puts("PS/2 Controller Initialized.\n\r");
 
-    tty_puts("PS/2 Controller Initialized.\n\r");
-
-    if ((uint32_t)(status = identify_ps2_port_1()) > 0xFFFF) {
-        tty_puts("PS/2 Identify failed for device on port 1.\n\r");
+        if ((uint32_t)(status = identify_ps2_port_1()) > 0xFFFF) {
+            tty_puts("PS/2 Identify failed for device on port 1.\n\r");
+            mask_irq(1);
+        }
     }
 
     __asm__ volatile("sti");

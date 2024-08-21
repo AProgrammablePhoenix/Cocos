@@ -266,14 +266,14 @@ identify_ps2_port_1:
 
 ;; resets the devices connected to the first PS/2 port
 reset_ps2_port_1:
+;; check if the device can identify, if not, it is not even worth it to reset it
     call identify_ps2_port_1
     cmp eax, 0xFFFF
     jle .L1
     mov eax, PS2_ERROR
     ret
 .L1:
-    push rbx
-    mov ebx, eax
+    mov ecx, eax
     mov dx, 0x1000
 .L2:
     test dx, dx
@@ -317,8 +317,13 @@ reset_ps2_port_1:
     in al, PS2_DATA_PORT
     cmp al, PS2_RESET_PASSED
     jne LATENCY_ERROR
-;; check for the ID byte(s)
+;; reset done, OK
+    xor eax, eax
+    ret
 
+;; called whenever there is a latency error, or an error in general
 LATENCY_ERROR:
+;; flush the data port one last time
+    in al, PS2_DATA_PORT
     mov eax, PS2_ERROR
     ret
