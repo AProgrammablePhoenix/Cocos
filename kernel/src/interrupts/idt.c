@@ -130,5 +130,5 @@ void kernel_idt_setup(void) {
 }
 
 void register_irq(unsigned int irq_line, void(*handler)(void), unsigned is_trap) {
-    register_core_interrupt(0x20 + irq_line, handler, 0, is_trap ? TRAP : EXCEPTION);
+    register_core_interrupt(0x20 + irq_line, handler, DPL0, is_trap ? TRAP : EXCEPTION);
 }

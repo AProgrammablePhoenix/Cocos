@@ -1,87 +1,19 @@
 #include <efi.h>
 
+#include <devices/PS2/keyboard.h>
+
+#include <interrupts/i8042.h>
+#include <interrupts/i8254.h>
+#include <interrupts/i8259A.h>
+#include <interrupts/idt.h>
+#include <interrupts/kpanic.h>
+#include <interrupts/system_timer.h>
+
 #include <screen/tty.h>
 
+#include <mm/gdt.h>
 #include <mm/pmm.h>
 #include <mm/vmm.h>
-
-extern void kernel_gdt_setup(void);
-extern void kernel_idt_load(void);
-extern void kernel_idt_setup(void);
-extern void register_irq(unsigned int irq_line, void(*handler)(void), unsigned is_trap);
-
-[[noreturn]] static void kernel_panic_shutdown_failed() {
-    tty_puts("Software shutdown failed, please perform a hard reset manually (press the power button for an extended period of time).\n\r");    
-    while (1);
-}
-
-[[noreturn]] static void kernel_panic_shutdown_secondary(EFI_RUNTIME_SERVICES* rtServices) {
-    tty_puts("KERNEL HIGH PANIC: COULD NOT GET CURRENT TIME\n\r");
-    tty_puts("Switching to secondary method, shuting down soon...\n\r");
-
-    // should be enough ticks to show the message
-    for (size_t i = 0; i < 80000000; ++i) {
-        __asm__ volatile("outb %b0, %w1" :: "a"(0), "Nd"(0x80) : "memory");
-    }
-
-    rtServices->ResetSystem(EfiResetShutdown, EFI_ABORTED, 0, NULL);
-
-    kernel_panic_shutdown_failed();
-}
-
-[[noreturn]] static void kernel_panic_shutdown(EFI_RUNTIME_SERVICES* rtServices, const char* message) {
-    tty_puts("KERNEL PANIC SHUTDOWN: ");
-    tty_puts(message);
-
-    tty_puts("Shuting down in 10 seconds...\n\r");
-
-    EFI_TIME time1, time2;
-
-    EFI_STATUS status = rtServices->GetTime(&time1, NULL);
-
-    if (status != EFI_SUCCESS) {            
-        kernel_panic_shutdown_secondary(rtServices);
-    }
-    
-    uint64_t elapsed = 0;
-
-    // this design does not require a memcpy implementation, and is usually faster given the amount of calls made per second
-    while (elapsed < 10) {
-        if (elapsed % 2 == 0) {
-            status = rtServices->GetTime(&time2, NULL);
-
-            if (status != EFI_SUCCESS) {
-                kernel_panic_shutdown_secondary(rtServices);
-            }               
-
-            if (time1.Second != time2.Second) {
-                ++elapsed;
-            }
-        }
-        else {
-            status = rtServices->GetTime(&time1, NULL);
-
-            if (status != EFI_SUCCESS) {
-                kernel_panic_shutdown_secondary(rtServices);
-            }
-
-            if (time1.Second != time2.Second) {
-                ++elapsed;
-            }
-        }
-    }
-
-    rtServices->ResetSystem(EfiResetShutdown, EFI_ABORTED, 0, NULL);
-
-    kernel_panic_shutdown_failed();
-}
-
-extern void initialize_pic(void);
-extern void mask_irq(uint64_t irq_line);
-extern void PIT_IRQ0_handler(void);
-extern void initialize_pit(void);
-extern int32_t initialize_ps2_controller(void);
-extern int32_t identify_ps2_port_1(void);
 
 void kmain() {
     __asm__ volatile("cli");
@@ -132,7 +64,19 @@ void kmain() {
             tty_puts("PS/2 Identify failed for device on port 1.\n\r");
             mask_irq(1);
         }
+        else {
+            if ((status = initialize_ps2_keyboard()) != 0) {
+                tty_puts("PS/2 Keyboard Initialization failed.\n\r");
+                tty_puts("No PS/2 input will be provided unless a USB keyboard is connected.\n\r");
+                mask_irq(1);
+            }
+            else {
+                tty_puts("PS/2 Keyboard Initialized.\n\r");
+            }
+        }
     }
+
+    while (1);
 
     __asm__ volatile("sti");
 

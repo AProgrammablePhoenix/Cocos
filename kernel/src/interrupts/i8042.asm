@@ -89,6 +89,8 @@ BITS 64
 
 global initialize_ps2_controller
 global identify_ps2_port_1
+global send_byte_ps2_port_1
+global recv_byte_ps2_port_1
 
 section .text
 ;; Initializes the PS/2 Controller, returns a non-zero value on failure
@@ -193,10 +195,10 @@ identify_ps2_port_1:
     in al, PS2_COMMAND_PORT
     and al, 0x2
     jnz .L0
+    mov dx, 0x1000
 .L1_RESEND:
     mov al, PS2_DISABLE_SCAN
     out PS2_DATA_PORT, al
-    mov dx, 0x1000
 .L1:
     test dx, dx
     jz LATENCY_ERROR
@@ -219,10 +221,10 @@ identify_ps2_port_1:
     in al, PS2_COMMAND_PORT
     and al, 0x2
     jnz .L2
+    mov dx, 0x1000
 .L3_RESEND:
     mov al, PS2_IDENTIFY
     out PS2_DATA_PORT, al
-    mov dx, 0x1000
 .L3:
     test dx, dx
     jz LATENCY_ERROR
@@ -284,10 +286,10 @@ reset_ps2_port_1:
     in al, PS2_COMMAND_PORT
     and al, 0x2
     jnz .L2
+    mov dx, 0x1000
 .L3_RESEND:
     mov al, PS2_RESET
     out PS2_DATA_PORT, al
-    mov dx, 0x1000
 .L3:
     test dx, dx
     jz LATENCY_ERROR
@@ -321,9 +323,39 @@ reset_ps2_port_1:
     xor eax, eax
     ret
 
+;; procedure used OUTSIDE of this file to send data to the device connected to the first PS/2 port
+send_byte_ps2_port_1:
+    mov dx, 0x1000
+.L0:
+    test dx, dx
+    jz LATENCY_ERROR
+    dec dx
+    mov al, 0x20
+    out 0x80, al
+    in al, PS2_COMMAND_PORT
+    and al, 0x2
+    jnz .L0
+    mov al, cl
+    out PS2_DATA_PORT, al
+    xor eax, eax
+    ret
+
+recv_byte_ps2_port_1:
+    xor eax, eax
+    mov dx, 0x1000
+.L0:
+    test dx, dx
+    jz LATENCY_ERROR
+    dec dx
+    mov al, 0x20
+    out 0x80, al
+    in al, PS2_COMMAND_PORT
+    and al, 0x1
+    jz .L0
+    in al, PS2_DATA_PORT
+    ret
+
 ;; called whenever there is a latency error, or an error in general
 LATENCY_ERROR:
-;; flush the data port one last time
-    in al, PS2_DATA_PORT
     mov eax, PS2_ERROR
     ret

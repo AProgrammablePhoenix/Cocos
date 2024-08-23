@@ -38,6 +38,15 @@ $(OBJECTSDIR):
 	@mkdir $(OBJECTSDIR)
 $(LIBSDIR):
 	@mkdir $(LIBSDIR)
+devices_csources = src/devices/PS2/keyboard.c 
+devices_cobjects = $(patsubst src/devices/%.c, objects/devices/%.o,$(devices_csources))
+$(devices_cobjects): objects/devices/%.o: src/devices/%.c | $(OBJECTSDIR)
+	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@echo Building $@
+	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
+lib/devices.lib: $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
+	@echo Creating $@
+	@$(AR) $@ $^
 interrupts_csources = src/interrupts/core_dump.c src/interrupts/idt.c src/interrupts/kpanic.c src/interrupts/system_timer.c 
 interrupts_cobjects = $(patsubst src/interrupts/%.c, objects/interrupts/%.o,$(interrupts_csources))
 $(interrupts_cobjects): objects/interrupts/%.o: src/interrupts/%.c | $(OBJECTSDIR)
@@ -77,9 +86,9 @@ $(screen_cobjects): objects/screen/%.o: src/screen/%.c | $(OBJECTSDIR)
 lib/screen.lib: $(screen_cobjects) $(screen_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-kernel.exe: src/kernel.c lib/interrupts.lib lib/mm.lib lib/screen.lib 
+kernel.exe: src/kernel.c lib/devices.lib lib/interrupts.lib lib/mm.lib lib/screen.lib 
 	@echo Building $@
-	@$(CCKER) $(CFLAGS) -Llib -linterrupts -lmm -lscreen -o $@ $<
+	@$(CCKER) $(CFLAGS) -Llib -ldevices -linterrupts -lmm -lscreen -o $@ $<
 .PHONY: clean
 clean:
 	if exist lib rmdir /Q /S lib
