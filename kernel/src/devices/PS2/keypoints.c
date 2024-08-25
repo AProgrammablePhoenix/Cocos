@@ -16,8 +16,8 @@ static const uint8_t scan_code_set_1_keypoints[0x100] = {
     KEYPOINT(4, 9),     KEYPOINT(4, 10),    KEYPOINT(4, 11),    KEYPOINT(4, 12),    // 0x18
     KEYPOINT(5, 13),    KEYPOINT(7, 0),     KEYPOINT(5, 1),     KEYPOINT(5, 2),     // 0x1C
     KEYPOINT(5, 3),     KEYPOINT(5, 4),     KEYPOINT(5, 5),     KEYPOINT(5, 6),     // 0x20
-    KEYPOINT(5, 7),     KEYPOINT(5, 8),     KEYPOINT(5, 8),     KEYPOINT(5, 9),     // 0x24
-    KEYPOINT(5, 10),    KEYPOINT(3, 0),     KEYPOINT(6, 0),     KEYPOINT(4, 13),    // 0x28
+    KEYPOINT(5, 7),     KEYPOINT(5, 8),     KEYPOINT(5, 9),     KEYPOINT(5, 10),    // 0x24
+    KEYPOINT(5, 11),    KEYPOINT(3, 0),     KEYPOINT(6, 0),     KEYPOINT(4, 13),    // 0x28
     KEYPOINT(6, 2),     KEYPOINT(6, 3),     KEYPOINT(6, 4),     KEYPOINT(6, 5),     // 0x2C
     KEYPOINT(6, 6),     KEYPOINT(6, 7),     KEYPOINT(6, 8),     KEYPOINT(6, 9),     // 0x30
     KEYPOINT(6, 10),    KEYPOINT(6, 11),    KEYPOINT(6, 12),    KEYPOINT(3, 18),    // 0x34
@@ -48,8 +48,8 @@ static const uint8_t scan_code_set_1_keypoints[0x100] = {
     KEYPOINT(4, 9),     KEYPOINT(4, 10),    KEYPOINT(4, 11),    KEYPOINT(4, 12),    // 0x98
     KEYPOINT(5, 13),    KEYPOINT(7, 0),     KEYPOINT(5, 1),     KEYPOINT(5, 2),     // 0x9C
     KEYPOINT(5, 3),     KEYPOINT(5, 4),     KEYPOINT(5, 5),     KEYPOINT(5, 6),     // 0xA0
-    KEYPOINT(5, 7),     KEYPOINT(5, 8),     KEYPOINT(5, 8),     KEYPOINT(5, 9),     // 0xA4
-    KEYPOINT(5, 10),    KEYPOINT(3, 0),     KEYPOINT(6, 0),     KEYPOINT(4, 13),    // 0xA8
+    KEYPOINT(5, 7),     KEYPOINT(5, 8),     KEYPOINT(5, 9),     KEYPOINT(5, 10),    // 0xA4
+    KEYPOINT(5, 11),    KEYPOINT(3, 0),     KEYPOINT(6, 0),     KEYPOINT(4, 13),    // 0xA8
     KEYPOINT(6, 2),     KEYPOINT(6, 3),     KEYPOINT(6, 4),     KEYPOINT(6, 5),     // 0xAC
     KEYPOINT(6, 6),     KEYPOINT(6, 7),     KEYPOINT(6, 8),     KEYPOINT(6, 9),     // 0xB0
     KEYPOINT(6, 10),    KEYPOINT(6, 11),    KEYPOINT(6, 12),    KEYPOINT(3, 18),    // 0xB4
@@ -401,8 +401,16 @@ unsigned int ps2_keyboard_scan_code_set_1(uint8_t byte, BasicKeyPacket* buffer) 
     }
 }
 
-unsigned int ps2_keyboard_scan_code_set_2(void) {
-    // do stuff
+unsigned int ps2_keyboard_scan_code_set_2(uint8_t byte, BasicKeyPacket* buffer) {
+    static enum {
+        DEFAULT,
+        EXTENDED1,
+        EXTENDED2_PRESSED,
+        EXTENDED2_RELEASED,
+        EXTENDED3
+    } state;
+
+
 }
 
 unsigned int ps2_keyboard_scan_code_set_3(void) {

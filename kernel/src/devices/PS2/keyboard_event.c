@@ -44,8 +44,18 @@ void ps2_keyboard_event_handler(void) {
         return;
     }
 
+    char buffer[17] = { 0 };
+
     BasicKeyPacket packet;
     if (ps2_keyboard_event_converter(byte, &packet) == PACKET_CREATED) {
-        // send packet to process
+        tty_puts("Keyboard event: ");
+        _utoax(packet.scancode, buffer);
+        tty_puts(buffer);
+        tty_putc(',');
+        _utoax(packet.keypoint, buffer);
+        tty_puts(buffer);
+        tty_putc(',');
+        tty_puts(packet.flags != 0 ? "PRESSED" : "RELEASED");
+        tty_puts("\n\r");
     }
 }
