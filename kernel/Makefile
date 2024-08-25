@@ -38,12 +38,18 @@ $(OBJECTSDIR):
 	@mkdir $(OBJECTSDIR)
 $(LIBSDIR):
 	@mkdir $(LIBSDIR)
-devices_csources = src/devices/PS2/keyboard.c 
+devices_csources = src/devices/PS2/keyboard.c src/devices/PS2/keyboard_event.c src/devices/PS2/keypoints.c 
 devices_cobjects = $(patsubst src/devices/%.c, objects/devices/%.o,$(devices_csources))
 $(devices_cobjects): objects/devices/%.o: src/devices/%.c | $(OBJECTSDIR)
 	@powershell -Command "mkdir -Force $(@D)" 1> nul
 	@echo Building $@
 	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
+devices_asmsources = src/devices/PS2/keyboard_handler_irq.asm 
+devices_asmobjects = $(patsubst src/devices/%.asm, objects/devices/%.o,$(devices_asmsources))
+$(devices_asmobjects): objects/devices/%.o: src/devices/%.asm | $(OBJECTSDIR)
+	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@echo Building $@
+	@nasm -fwin64 $< -o $@
 lib/devices.lib: $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^

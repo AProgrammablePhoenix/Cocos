@@ -15,6 +15,8 @@
 #include <mm/pmm.h>
 #include <mm/vmm.h>
 
+extern void PS2_IRQ1_handler(void);
+
 void kmain() {
     __asm__ volatile("cli");
 
@@ -72,11 +74,10 @@ void kmain() {
             }
             else {
                 tty_puts("PS/2 Keyboard Initialized.\n\r");
+                register_irq(1, &PS2_IRQ1_handler, 0);
             }
         }
     }
-
-    while (1);
 
     __asm__ volatile("sti");
 

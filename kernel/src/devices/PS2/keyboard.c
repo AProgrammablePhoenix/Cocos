@@ -1,6 +1,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <devices/PS2/keypoints.h>
+
 #include <interrupts/i8042.h>
 #include <interrupts/i8259A.h>
 
@@ -33,6 +35,8 @@
 #define SET_SCROLL_LOCK     0x01
 #define SET_NUMBER_LOCK     0x02
 #define SET_CAPS_LOCK       0x04
+
+extern unsigned int (*ps2_keyboard_event_converter)(uint8_t byte, BasicKeyPacket* buffer);
 
 static inline unsigned int send_command(uint8_t command) {
     for (size_t t = 0; t < MAX_RETRY; ++t) {
@@ -193,8 +197,8 @@ unsigned int initialize_ps2_keyboard(void) {
     if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
         return FATAL_ERROR;
     }
-    else if (scan_code_set != SCAN_CODE_SET_3) {
-        if (set_scan_code_set(SCAN_CODE_SET_3) == FATAL_ERROR) {
+    else if (scan_code_set != SCAN_CODE_SET_1) {
+        if (set_scan_code_set(SCAN_CODE_SET_1) == FATAL_ERROR) {
             return FATAL_ERROR;
         }
         if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
@@ -210,6 +214,10 @@ unsigned int initialize_ps2_keyboard(void) {
     // Re-enable keyboard scanning
     if (enable_scanning() == FATAL_ERROR) {
         return FATAL_ERROR;
+    }
+
+    if (scan_code_set == SCAN_CODE_SET_1) {
+        ps2_keyboard_event_converter = &ps2_keyboard_scan_code_set_1;
     }
 
     return 0;
