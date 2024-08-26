@@ -4,6 +4,14 @@
 
 #define KEYPOINT(ROW, COLUMN) ((ROW & 0x07) | ((COLUMN & 0x1F) << 3))
 
+#define SCAN_CODE_SET_1_EXT_1_2 0xE0
+#define SCAN_CODE_SET_1_EXT_2   0x2A
+#define SCAN_CODE_SET_1_EXT_3   0xE1
+
+#define SCAN_CODE_SET_2_RELEASE     0xF0
+#define SCAN_CODE_SET_2_EXT_1_2     0xE0
+#define SCAN_CODE_SET_2_EXT_3       0xE1    
+
 // PS/2 Scan Code Set 1
 
 static const uint8_t scan_code_set_1_keypoints[0x100] = {
@@ -149,7 +157,7 @@ static const uint8_t ext_3_scan_code_set_1_keypoint = KEYPOINT(1, 15);
 
 // PS/2 Scan Code Set 2
 
-static const uint8_t scan_code_set_2_keypoints[0x84] = {
+static const uint8_t scan_code_set_2_keypoints[0x100] = {
     KEYPOINT(0, 0),     KEYPOINT(2, 9),     KEYPOINT(0, 0),     KEYPOINT(2, 5),     // 0x00
     KEYPOINT(2, 3),     KEYPOINT(2, 1),     KEYPOINT(2, 2),     KEYPOINT(2, 12),    // 0x04
     KEYPOINT(0, 0),     KEYPOINT(2, 10),    KEYPOINT(2, 8),     KEYPOINT(2, 6),     // 0x08
@@ -173,7 +181,7 @@ static const uint8_t scan_code_set_2_keypoints[0x84] = {
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(5, 11),    KEYPOINT(0, 0),     // 0x50
     KEYPOINT(4, 11),    KEYPOINT(3, 12),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x54
     KEYPOINT(5, 0),     KEYPOINT(6, 12),    KEYPOINT(5, 13),    KEYPOINT(4, 12),    // 0x58
-    KEYPOINT(4, 13),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x5C
+    KEYPOINT(0, 0),     KEYPOINT(4, 13),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x5C
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x60
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(3, 13),    KEYPOINT(0, 0),     // 0x64
     KEYPOINT(0, 0),     KEYPOINT(6, 16),    KEYPOINT(0, 0),     KEYPOINT(5, 16),    // 0x68
@@ -182,10 +190,41 @@ static const uint8_t scan_code_set_2_keypoints[0x84] = {
     KEYPOINT(5, 18),    KEYPOINT(4, 17),    KEYPOINT(2, 0),     KEYPOINT(3, 16),    // 0x74
     KEYPOINT(2, 11),    KEYPOINT(5, 19),    KEYPOINT(6, 18),    KEYPOINT(3, 19),    // 0x78
     KEYPOINT(3, 18),    KEYPOINT(4, 18),    KEYPOINT(1, 14),    KEYPOINT(0, 0),     // 0x7C
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(2, 7)      // 0x80
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(2, 7),     // 0x80
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x84
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x88
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x8C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x90
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x94
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x98
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x9C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xAC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xBC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xCC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xDC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xEC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0)      // 0xFC
 };
 
-static const uint8_t ext_1_scan_code_set_2_keypoints[0x80] = {
+static const uint8_t ext_1_scan_code_set_2_keypoints[0x100] = {
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x00
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x04
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x08
@@ -217,17 +256,51 @@ static const uint8_t ext_1_scan_code_set_2_keypoints[0x80] = {
     KEYPOINT(2, 13),    KEYPOINT(3, 14),    KEYPOINT(7, 13),    KEYPOINT(0, 0),     // 0x70
     KEYPOINT(7, 14),    KEYPOINT(6, 13),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x74
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(4, 14),    KEYPOINT(0, 0),     // 0x78
-    KEYPOINT(0, 0),     KEYPOINT(2, 15),    KEYPOINT(0, 0),     KEYPOINT(0, 0)      // 0x7C
+    KEYPOINT(0, 0),     KEYPOINT(2, 15),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x7C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x80
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x84
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x88
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x8C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x90
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x94
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x98
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x9C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xAC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xBC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xCC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xDC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xEC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0)      // 0xFC
 };
 
 static const uint8_t ext_2_scan_code_set_2_scancodes_pressed[4] = { 0xE0, 0x12, 0xE0, 0x7C };
 static const uint8_t ext_2_scan_code_set_2_scancodes_released[6] = { 0xE0, 0xF0, 0x7C, 0xE0, 0xF0, 0x12 };
 static const uint8_t ext_2_scan_code_set_2_keypoint = KEYPOINT(1, 13);
 
-static const uint8_t ext_3_scan_code_set_3_scancodes[8] = { 0xE1, 0x14, 0x77, 0xE1, 0xF0, 0x14, 0xF0, 0x77 };
-static const uint8_t ext_3_scan_code_set_3_keypoint = KEYPOINT(1, 15);
+static const uint8_t ext_3_scan_code_set_2_scancodes[8] = { 0xE1, 0x14, 0x77, 0xE1, 0xF0, 0x14, 0xF0, 0x77 };
+static const uint8_t ext_3_scan_code_set_2_keypoint = KEYPOINT(1, 15);
 
-static const uint8_t scan_code_set_3_keypoints[0x90] = {
+// PS/2 Scan Code Set 3
+
+static const uint8_t scan_code_set_3_keypoints[0x100] = {
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x00
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(2, 1),     // 0x04
     KEYPOINT(2, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x08
@@ -264,11 +337,35 @@ static const uint8_t scan_code_set_3_keypoints[0x90] = {
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x84
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(7, 1),     // 0x88
     KEYPOINT(7, 9),     KEYPOINT(7, 10),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x8C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x90
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x94
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x98
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x9C
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xA8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xAC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xB8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xBC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xC8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xCC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xDC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xEC
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF0
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF8
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0)      // 0xFC
 };
-
-#define SCAN_CODE_SET_1_EXT_1_2 0xE0
-#define SCAN_CODE_SET_1_EXT_2   0x2A
-#define SCAN_CODE_SET_1_EXT_3   0xE1
 
 unsigned int ps2_keyboard_scan_code_set_1(uint8_t byte, BasicKeyPacket* buffer) {
     static enum {
@@ -410,7 +507,142 @@ unsigned int ps2_keyboard_scan_code_set_2(uint8_t byte, BasicKeyPacket* buffer) 
         EXTENDED3
     } state;
 
+    static unsigned int bytes_read = 0;
+    static unsigned int on_error = 0;
+    static unsigned int on_release = 0;
 
+    switch (state) {
+        case DEFAULT:
+            switch (byte) {
+                case SCAN_CODE_SET_2_EXT_1_2:
+                    ++bytes_read;
+                    state = EXTENDED1;
+                    return IGNORE;
+                case SCAN_CODE_SET_2_EXT_3:
+                    ++bytes_read;
+                    state = EXTENDED3;
+                    return IGNORE;
+                case SCAN_CODE_SET_2_RELEASE:
+                    ++bytes_read;
+                    on_release = 1;
+                    return IGNORE;
+                default:
+                    bytes_read = 0;
+                    BasicKeyPacket packet = {
+                        .scancode = byte,
+                        .keypoint = scan_code_set_2_keypoints[byte % 0x84],
+                        .flags = (on_release ? 0 : KEY_PRESSED)
+                    };
+                    on_release = 0;
+                    *buffer = packet;
+                    return PACKET_CREATED;
+            };
+        case EXTENDED1:
+            if (byte == SCAN_CODE_SET_2_RELEASE) {
+                ++bytes_read;
+                on_release = 1;
+                return IGNORE;
+            }
+            else if (byte == ext_2_scan_code_set_2_scancodes_pressed[bytes_read]) {
+                ++bytes_read;
+                state = EXTENDED2_PRESSED;
+                return IGNORE;
+            }
+            else if (byte == ext_2_scan_code_set_2_scancodes_released[bytes_read]) {
+                ++bytes_read;
+                state = EXTENDED2_RELEASED;
+                return IGNORE;
+            }
+            else {
+                bytes_read = 0;
+                state = DEFAULT;
+                BasicKeyPacket packet = {
+                    .scancode = byte,
+                    .keypoint = ext_1_scan_code_set_2_keypoints[byte],
+                    .flags = (on_release ? 0 : KEY_PRESSED)
+                };
+                on_release = 0;
+                *buffer = packet;
+                return PACKET_CREATED;
+            }
+        case EXTENDED2_PRESSED:
+            if (byte == ext_2_scan_code_set_2_scancodes_pressed[bytes_read] && !on_error) {
+                if (++bytes_read == 4) {
+                    bytes_read = 0;
+                    state = DEFAULT;
+                    BasicKeyPacket packet = {
+                        .scancode = byte,
+                        .keypoint = ext_2_scan_code_set_2_keypoint,
+                        .flags = KEY_PRESSED
+                    };
+                    *buffer = packet;
+                    return PACKET_CREATED;
+                }
+                return IGNORE;
+            }
+            else {
+                on_error = 1;
+                if (++bytes_read == 4) {
+                    bytes_read = 0;
+                    state = DEFAULT;
+                    on_error = 0;
+                    on_release = 0;
+                }
+                return IGNORE;
+            }
+        case EXTENDED2_RELEASED:
+            if (byte == ext_2_scan_code_set_2_scancodes_released[bytes_read] && !on_error) {
+                if (++bytes_read == 6) {
+                    bytes_read = 0;
+                    on_release = 0;
+                    state = DEFAULT;
+                    BasicKeyPacket packet = {
+                        .scancode = byte,
+                        .keypoint = ext_2_scan_code_set_2_keypoint,
+                        .flags = 0
+                    };
+                    *buffer = packet;
+                    return PACKET_CREATED;
+                }
+                return IGNORE;
+            }
+            else {
+                on_error = 1;
+                if (++bytes_read == 6) {
+                    bytes_read = 0;
+                    state = DEFAULT;
+                    on_error = 0;
+                    on_release = 0;
+                }
+                return IGNORE;
+            }
+        case EXTENDED3:
+            if (byte == ext_3_scan_code_set_2_scancodes[bytes_read] && !on_error) {
+                if (++bytes_read == 8) {
+                    bytes_read = 0;
+                    state = DEFAULT;
+                    BasicKeyPacket packet = {
+                        .scancode = byte,
+                        .keypoint = ext_3_scan_code_set_2_keypoint,
+                        .flags = KEY_PRESSED
+                    };
+                    *buffer = packet;
+                    return PACKET_CREATED;
+                }
+                return IGNORE;
+            }
+            else {
+                on_error = 1;
+                if (++bytes_read == 8) {
+                    bytes_read = 0;
+                    state = DEFAULT;
+                    on_error = 0;
+                }
+                return IGNORE;
+            }
+        default:
+            return IGNORE;
+    }
 }
 
 unsigned int ps2_keyboard_scan_code_set_3(void) {

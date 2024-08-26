@@ -14,3 +14,4 @@ typedef struct {
 } BasicKeyPacket;
 
 unsigned int ps2_keyboard_scan_code_set_1(uint8_t byte, BasicKeyPacket* buffer);
+unsigned int ps2_keyboard_scan_code_set_2(uint8_t byte, BasicKeyPacket* buffer);

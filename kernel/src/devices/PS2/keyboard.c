@@ -187,18 +187,18 @@ static inline unsigned int enable_scanning(void) {
 }
 
 unsigned int initialize_ps2_keyboard(void) {
-    // reset LEDs
+    // resets LEDs
     if (reset_leds() == FATAL_ERROR) {
         return FATAL_ERROR;
     }
 
-    // tries to set scan scode set 3, otherwise adapts to the current one
+    // tries to set scan code set 3, otherwise adapts to the current one
     unsigned int scan_code_set = 0;
     if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
         return FATAL_ERROR;
     }
-    else if (scan_code_set != SCAN_CODE_SET_1) {
-        if (set_scan_code_set(SCAN_CODE_SET_1) == FATAL_ERROR) {
+    else if (scan_code_set != SCAN_CODE_SET_2) {
+        if (set_scan_code_set(SCAN_CODE_SET_2) == FATAL_ERROR) {
             return FATAL_ERROR;
         }
         if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
@@ -206,18 +206,22 @@ unsigned int initialize_ps2_keyboard(void) {
         }
     }
     
-    // Perform ECHO to check if the device is still responsive
+    // Performs ECHO to check if the device is still responsive
     if (echo_check() == FATAL_ERROR) {
         return FATAL_ERROR;
     }
 
-    // Re-enable keyboard scanning
-    if (enable_scanning() == FATAL_ERROR) {
-        return FATAL_ERROR;
-    }
-
+    // selects the correct scan code converter
     if (scan_code_set == SCAN_CODE_SET_1) {
         ps2_keyboard_event_converter = &ps2_keyboard_scan_code_set_1;
+    }
+    else if (scan_code_set == SCAN_CODE_SET_2) {
+        ps2_keyboard_event_converter = &ps2_keyboard_scan_code_set_2;
+    }
+
+    // Re-enables keyboard scanning
+    if (enable_scanning() == FATAL_ERROR) {
+        return FATAL_ERROR;
     }
 
     return 0;
