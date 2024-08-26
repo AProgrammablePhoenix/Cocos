@@ -12,6 +12,8 @@
 #define SCAN_CODE_SET_2_EXT_1_2     0xE0
 #define SCAN_CODE_SET_2_EXT_3       0xE1    
 
+#define SCAN_CODE_SET_3_RELEASE     0xF0
+
 // PS/2 Scan Code Set 1
 
 static const uint8_t scan_code_set_1_keypoints[0x100] = {
@@ -312,7 +314,7 @@ static const uint8_t scan_code_set_3_keypoints[0x100] = {
     KEYPOINT(0, 0),     KEYPOINT(6, 4),     KEYPOINT(6, 3),     KEYPOINT(5, 3),     // 0x20
     KEYPOINT(4, 3),     KEYPOINT(3, 4),     KEYPOINT(3, 3),     KEYPOINT(2, 5),     // 0x24
     KEYPOINT(0, 0),     KEYPOINT(7, 6),     KEYPOINT(6, 5),     KEYPOINT(5, 4),     // 0x28
-    KEYPOINT(4, 5),     KEYPOINT(4, 4),     KEYPOINT(0, 0),     KEYPOINT(2, 6),     // 0x2C
+    KEYPOINT(4, 5),     KEYPOINT(4, 4),     KEYPOINT(3, 5),     KEYPOINT(2, 6),     // 0x2C
     KEYPOINT(0, 0),     KEYPOINT(6, 7),     KEYPOINT(6, 6),     KEYPOINT(5, 6),     // 0x30
     KEYPOINT(5, 5),     KEYPOINT(4, 6),     KEYPOINT(3, 6),     KEYPOINT(2, 7),     // 0x34
     KEYPOINT(0, 0),     KEYPOINT(7, 8),     KEYPOINT(6, 8),     KEYPOINT(5, 7),     // 0x38
@@ -374,7 +376,7 @@ unsigned int ps2_keyboard_scan_code_set_1(uint8_t byte, BasicKeyPacket* buffer) 
         EXTENDED2_PRESS,
         EXTENDED2_RELEASE,
         EXTENDED3
-    } state;
+    } state = DEFAULT;
 
     static unsigned int bytes_read = 0;
     static unsigned int on_error = 0;
@@ -505,7 +507,7 @@ unsigned int ps2_keyboard_scan_code_set_2(uint8_t byte, BasicKeyPacket* buffer) 
         EXTENDED2_PRESSED,
         EXTENDED2_RELEASED,
         EXTENDED3
-    } state;
+    } state = DEFAULT;
 
     static unsigned int bytes_read = 0;
     static unsigned int on_error = 0;
@@ -645,6 +647,23 @@ unsigned int ps2_keyboard_scan_code_set_2(uint8_t byte, BasicKeyPacket* buffer) 
     }
 }
 
-unsigned int ps2_keyboard_scan_code_set_3(void) {
-    // do stuff
+unsigned int ps2_keyboard_scan_code_set_3(uint8_t byte, BasicKeyPacket* buffer) {
+    static enum {
+        DEFAULT,
+        RELEASE
+    } state = DEFAULT;
+
+    if (byte == SCAN_CODE_SET_3_RELEASE) {
+        state = RELEASE;
+        return IGNORE;
+    }
+
+    BasicKeyPacket packet = {
+        .scancode = byte,
+        .keypoint = scan_code_set_3_keypoints[byte],
+        .flags = (state == RELEASE ? 0 : KEY_PRESSED)
+    };
+    state = DEFAULT;
+    *buffer = packet;
+    return PACKET_CREATED;
 }

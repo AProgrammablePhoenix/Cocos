@@ -192,13 +192,13 @@ unsigned int initialize_ps2_keyboard(void) {
         return FATAL_ERROR;
     }
 
-    // tries to set scan code set 3, otherwise adapts to the current one
+    // tries to set scan code set 1, otherwise adapts to the current one
     unsigned int scan_code_set = 0;
     if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
         return FATAL_ERROR;
     }
-    else if (scan_code_set != SCAN_CODE_SET_2) {
-        if (set_scan_code_set(SCAN_CODE_SET_2) == FATAL_ERROR) {
+    else if (scan_code_set != SCAN_CODE_SET_3) {
+        if (set_scan_code_set(SCAN_CODE_SET_3) == FATAL_ERROR) {
             return FATAL_ERROR;
         }
         if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
@@ -217,6 +217,13 @@ unsigned int initialize_ps2_keyboard(void) {
     }
     else if (scan_code_set == SCAN_CODE_SET_2) {
         ps2_keyboard_event_converter = &ps2_keyboard_scan_code_set_2;
+    }
+    else if (scan_code_set == SCAN_CODE_SET_3) {
+        ps2_keyboard_event_converter = &ps2_keyboard_scan_code_set_3;
+    }
+    else {
+        disable_keyboard();
+        return FATAL_ERROR;
     }
 
     // Re-enables keyboard scanning
