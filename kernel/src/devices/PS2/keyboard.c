@@ -197,8 +197,8 @@ unsigned int initialize_ps2_keyboard(void) {
     if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {
         return FATAL_ERROR;
     }
-    else if (scan_code_set != SCAN_CODE_SET_3) {
-        if (set_scan_code_set(SCAN_CODE_SET_3) == FATAL_ERROR) {
+    else if (scan_code_set != SCAN_CODE_SET_1) {
+        if (set_scan_code_set(SCAN_CODE_SET_1) == FATAL_ERROR) {
             return FATAL_ERROR;
         }
         if (get_scan_code_set(&scan_code_set) == FATAL_ERROR) {

@@ -39,14 +39,14 @@ static const uint8_t scan_code_set_1_keypoints[0x100] = {
     KEYPOINT(5, 17),    KEYPOINT(5, 18),    KEYPOINT(5, 19),    KEYPOINT(6, 16),    // 0x4C
     KEYPOINT(6, 17),    KEYPOINT(6, 18),    KEYPOINT(7, 16),    KEYPOINT(7, 18),    // 0x50
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(2, 11),    // 0x54
-    KEYPOINT(2, 12),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x58
+    KEYPOINT(2, 12),    KEYPOINT(6, 19),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x58
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x5C
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x60
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x64
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x68
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x6C
+    KEYPOINT(1, 1),     KEYPOINT(1, 2),     KEYPOINT(1, 3),     KEYPOINT(1, 4),     // 0x64
+    KEYPOINT(1, 5),     KEYPOINT(1, 6),     KEYPOINT(1, 7),     KEYPOINT(1, 8),     // 0x68
+    KEYPOINT(1, 9),     KEYPOINT(1, 10),    KEYPOINT(1, 11),    KEYPOINT(0, 0),     // 0x6C
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x70
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x74
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(1, 12),    KEYPOINT(0, 0),     // 0x74
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x78
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0x7C
     KEYPOINT(0, 0),     KEYPOINT(2, 0),     KEYPOINT(3, 1),     KEYPOINT(3, 2),     // 0x80
@@ -71,14 +71,14 @@ static const uint8_t scan_code_set_1_keypoints[0x100] = {
     KEYPOINT(5, 17),    KEYPOINT(5, 18),    KEYPOINT(5, 19),    KEYPOINT(6, 16),    // 0xCC
     KEYPOINT(6, 17),    KEYPOINT(6, 18),    KEYPOINT(7, 16),    KEYPOINT(7, 18),    // 0xD0
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(2, 11),    // 0xD4
-    KEYPOINT(2, 12),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD8
+    KEYPOINT(2, 12),    KEYPOINT(6, 19),    KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xD8
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xDC
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE0
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE4
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xE8
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xEC
+    KEYPOINT(1, 1),     KEYPOINT(1, 2),     KEYPOINT(1, 3),     KEYPOINT(1, 4),     // 0xE4
+    KEYPOINT(1, 5),     KEYPOINT(1, 6),     KEYPOINT(1, 7),     KEYPOINT(1, 8),     // 0xE8
+    KEYPOINT(1, 9),     KEYPOINT(1, 10),    KEYPOINT(1, 11),    KEYPOINT(0, 0),     // 0xEC
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF0
-    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF4
+    KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(1, 12),    KEYPOINT(0, 0),     // 0xF4
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     // 0xF8
     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0),     KEYPOINT(0, 0)      // 0xFC
 };
