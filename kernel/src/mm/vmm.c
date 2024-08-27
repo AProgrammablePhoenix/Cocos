@@ -1,9 +1,11 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include <mm/pmm.h>
 #include <mm/vmm.h>
 
-#define NULL ((void*)0)
+#define KERNEL_ON_DEMAND    0x000FFFFFFFFFF000
+#define USER_ON_DEMAND      0x0007FFFFFFFFF000
 
 VIRTUAL_ADDRESS parse_virtual_address(uint64_t address) {
     VIRTUAL_ADDRESS vaddr = {
@@ -117,6 +119,67 @@ static int map_4KB(uint64_t physical_frame, uint64_t virtual_frame) {
     return 0;
 }
 
+#define KERNEL_ACCESS   0
+#define USER_ACCESS     1
+
+// maps the given range on-demand (physical frame allocation is reserved to the page-fault handler)
+// BE CAUTIOUS when using this function as it ERASES ANY INFORMATION stored in the given range,
+// make sure the latter is free before calling this function.
+static inline int map_on_demand(void* address, uint64_t pages, int privilege) {
+    for (size_t i = 0; i < pages; ++i) {
+        VIRTUAL_ADDRESS virt = parse_virtual_address((uint64_t)address);
+
+        PML4E* pml4e = get_pml4e_address(virt.PML4_offset);
+        if ((pml4e->raw & PML4E_PRESENT) == 0) {
+            void* page = pmalloc();
+            if (page == NULL) {
+                return -1;
+            }
+            pml4e->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PML4E_USERMODE : 0) | PML4E_READWRITE | PML4E_PRESENT;
+
+            uint64_t* pdpt = (uint64_t*)get_pdpt_address(virt.PML4_offset);
+            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
+                *(pdpt + i) = 0;
+            }
+        }
+
+        PDPTE* pdpte = get_pdpte_address(virt.PML4_offset, virt.PDPT_offset);
+        if ((pdpte->raw & PDPTE_PRESENT) == 0) {
+            void* page = pmalloc();
+            if (page == NULL) {
+                return -1;
+            }
+            pdpte->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PDPTE_USERMODE : 0) | PDPTE_READWRITE | PDPTE_PRESENT;
+
+            uint64_t* pd = (uint64_t*)get_pd_address(virt.PML4_offset, virt.PDPT_offset);
+            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
+                *(pd + i) = 0;
+            }
+        }
+
+        PDE* pde = get_pde_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset);
+        if ((pde->raw & PDE_PRESENT) == 0) {
+            void* page = pmalloc();
+            if (page == NULL) {
+                return -1;
+            }
+            pde->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PDE_USERMODE : 0) | PDE_READWRITE | PDE_PRESENT;
+
+            uint64_t* pt = (uint64_t*)get_pt_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset);
+            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
+                *(pt + i) = 0;
+            }
+        }
+
+        PTE* pte = get_pte_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset, virt.PT_offset);
+        pte->raw = privilege == USER_ACCESS ? USER_ON_DEMAND : KERNEL_ON_DEMAND;
+
+        address = (uint8_t*)address + FRAME_SIZE;
+    }
+
+    return 0;
+}
+
 typedef struct {
     uint64_t virtual_start;
     uint64_t available_pages;
@@ -186,6 +249,30 @@ int vmm_setup(void) {
     umem_map_block->virtual_start = DMA_ZONE + DMA_ZONE_SIZE;
     umem_map_block->available_pages = available_user_memory / FRAME_SIZE;
 
+    // setup kernel stack and the stack guard
+    map_on_demand((void*)(KERNEL_STACK + FRAME_SIZE), KERNEL_STACK_SIZE - 2 * FRAME_SIZE, KERNEL_ACCESS);
+    VIRTUAL_ADDRESS kernel_stack_guard_virt = parse_virtual_address(KERNEL_STACK);
+    PTE* kernel_stack_guard = get_pte_address(
+        kernel_stack_guard_virt.PML4_offset,
+        kernel_stack_guard_virt.PDPT_offset,
+        kernel_stack_guard_virt.PD_offset,
+        kernel_stack_guard_virt.PT_offset
+    );
+    kernel_stack_guard->raw = 0;
+    VIRTUAL_ADDRESS kernel_stack_base_virt = parse_virtual_address(KERNEL_STACK + KERNEL_STACK_SIZE - 1);
+    PTE* kernel_stack_base = get_pte_address(
+        kernel_stack_base_virt.PML4_offset,
+        kernel_stack_base_virt.PDPT_offset,
+        kernel_stack_base_virt.PD_offset,
+        kernel_stack_base_virt.PT_offset
+    );
+
+    void* kernel_stack_base_page = pmalloc();
+    if (kernel_stack_base_page == NULL) {
+        return -1;
+    }
+    kernel_stack_base->raw = filter_address((uint64_t)kernel_stack_base_page) | PTE_READWRITE | PTE_PRESENT;
+
     return 0;
 }
 
@@ -211,7 +298,7 @@ static inline VMemMapBlock* sort_vmem_map(VMemMapBlock* start, size_t n) {
     return start;
 }
 
-// reverse sorts (sorts to the left) by descending number of pages, returns the new address of start
+// reverse sorts (sorts to the left) by ascending number of pages, returns the new address of start
 static inline VMemMapBlock* rsort_vmem_map(VMemMapBlock* start, size_t n) {
     if (n == 0 || n == 1) {
         return start;
@@ -225,70 +312,6 @@ static inline VMemMapBlock* rsort_vmem_map(VMemMapBlock* start, size_t n) {
     }
 
     return start;
-}
-
-#define KERNEL_ACCESS   0
-#define USER_ACCESS     1
-
-#define KERNEL_ON_DEMAND    0x7FFFFFFFFFFFFFFE
-#define USER_ON_DEMAND      0xFFFFFFFFFFFFFFFE
-
-// maps the given range on-demand (physical frame allocation is reserved to the page-fault handler)
-// BE CAUTIOUS when using this function as it ERASES ANY INFORMATION stored in the given range,
-// make sure the latter is free before calling this function.
-static inline int map_on_demand(void* address, uint64_t pages, int privilege) {
-    for (size_t i = 0; i < pages; ++i) {
-        VIRTUAL_ADDRESS virt = parse_virtual_address((uint64_t)address);
-
-        PML4E* pml4e = get_pml4e_address(virt.PML4_offset);
-        if ((pml4e->raw & PML4E_PRESENT) == 0) {
-            void* page = pmalloc();
-            if (page == NULL) {
-                return -1;
-            }
-            pml4e->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PML4E_USERMODE : 0) | PML4E_READWRITE | PML4E_PRESENT;
-
-            uint64_t* pdpt = (uint64_t*)get_pdpt_address(virt.PML4_offset);
-            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
-                *(pdpt + i) = 0;
-            }
-        }
-
-        PDPTE* pdpte = get_pdpte_address(virt.PML4_offset, virt.PDPT_offset);
-        if ((pdpte->raw & PDPTE_PRESENT) == 0) {
-            void* page = pmalloc();
-            if (page == NULL) {
-                return -1;
-            }
-            pdpte->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PDPTE_USERMODE : 0) | PDPTE_READWRITE | PDPTE_PRESENT;
-
-            uint64_t* pd = (uint64_t*)get_pd_address(virt.PML4_offset, virt.PDPT_offset);
-            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
-                *(pd + i) = 0;
-            }
-        }
-
-        PDE* pde = get_pde_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset);
-        if ((pde->raw & PDE_PRESENT) == 0) {
-            void* page = pmalloc();
-            if (page == NULL) {
-                return -1;
-            }
-            pde->raw = ((filter_address((uint64_t)page) >> 12) << 12) | (privilege == USER_ACCESS ? PDE_USERMODE : 0) | PDE_READWRITE | PDE_PRESENT;
-
-            uint64_t* pt = (uint64_t*)get_pt_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset);
-            for (size_t i = 0; i < FRAME_SIZE / sizeof(uint64_t); ++i) {
-                *(pt + i) = 0;
-            }
-        }
-
-        PTE* pte = get_pte_address(virt.PML4_offset, virt.PDPT_offset, virt.PD_offset, virt.PT_offset);
-        pte->raw = privilege == USER_ACCESS ? USER_ON_DEMAND : KERNEL_ON_DEMAND;
-
-        address = (uint8_t*)address + FRAME_SIZE;
-    }
-
-    return 0;
 }
 
 static inline void* kvmalloc_user_hint_core(VMemMapBlock* vmem_block, uint64_t pages, size_t map_offset) {

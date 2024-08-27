@@ -17,6 +17,8 @@
 
 extern void PS2_IRQ1_handler(void);
 
+static EFI_RUNTIME_SERVICES* rtServices;
+
 void kmain() {
     __asm__ volatile("cli");
 
@@ -25,7 +27,7 @@ void kmain() {
     kernel_idt_setup();
 
     uint8_t* linfo = (uint8_t*)0xFFFF8004B8080000;
-    EFI_RUNTIME_SERVICES* rtServices = *(EFI_RUNTIME_SERVICES**)(linfo + 0x250 + *(uint64_t*)linfo);
+    rtServices = *(EFI_RUNTIME_SERVICES**)(linfo + 0x250 + *(uint64_t*)linfo);
 
     tty_setup();
     tty_puts("TTY Enabled\n\r");
@@ -47,7 +49,17 @@ void kmain() {
         kernel_panic_shutdown(rtServices, "VMM INITIALIZATION FAILED\n\r");
     }
 
-    __asm__ volatile("mov %rsp, %r15");
+    uint8_t* stack_top = 0;
+    uint64_t stack_top_offset = 0;    
+    __asm__ volatile("mov %%rsp, %0" : "=r"(stack_top));
+    __asm__ volatile("mov %%rbp, %%rax\n\rsub %%rsp, %%rax\n\rmov %%rax, %0" : "=r"(stack_top_offset));
+
+    for (size_t i = 0; i < stack_top_offset; ++i) {
+        *(uint8_t*)(KERNEL_STACK_BASE - stack_top_offset + i) = *(stack_top + i);
+    }
+
+    __asm__ volatile("mov %0, %%rbp" :: "r"(KERNEL_STACK_BASE));
+    __asm__ volatile("mov %0, %%rsp" :: "r"(KERNEL_STACK_BASE - stack_top_offset));
 
     tty_puts("VMM Initialized\n\r");
 

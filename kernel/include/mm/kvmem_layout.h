@@ -5,6 +5,7 @@
 #define KERNEL_IMAGE                0xFFFF800000000000
 #define KERNEL_HEAP                 0xFFFF800002000000
 #define KERNEL_STACK                0xFFFF800021EFF000
+#define KERNEL_STACK_BASE           0xFFFF800021FFFFF0
 
 #define EFI_RT_SVC                  0xFFFF800022000000
 #define ACPI_DATA                   0xFFFF800026000000
