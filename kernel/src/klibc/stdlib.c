@@ -127,6 +127,10 @@ void free(void* ptr) {
             blkptr->next->prev = blkptr->prev;
             blkptr = blkptr->prev;
         }
+
+        if (blkptr->prev == NULL) {
+            memctx.first_block = blkptr;
+        }
     }
     else {
         if (memctx.first_block == NULL) {
