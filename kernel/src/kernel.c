@@ -93,7 +93,9 @@ void kmain() {
 
     __asm__ volatile("sti");
 
-    //void* ecam_0 = map_pci_configuration(*(void**)(linfo + 0x258 + *(uint64_t*)linfo));
+    void* ecam_0 = map_pci_configuration(*(void**)(linfo + 0x258 + *(uint64_t*)linfo));
+    __asm__ volatile("mov %0, %%r15" :: "r"(ecam_0));
+    __asm__ volatile("int $3");
     
     __asm__ volatile("jmp .");
 }

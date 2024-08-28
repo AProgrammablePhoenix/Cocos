@@ -763,3 +763,25 @@ void* map_pci_configuration(void* _config_addr) {
 
     return NULL;
 }
+
+void unmap_pci_configuration(void* _config_addr) {
+    VIRTUAL_ADDRESS pci_page = parse_virtual_address((uint64_t)_config_addr);
+
+    PML4E* pml4e = get_pml4e_address(pci_page.PML4_offset);
+    if ((pml4e->raw & PML4E_PRESENT) == 0) {
+        return;
+    }
+
+    PDPTE* pdpte = get_pdpte_address(pci_page.PML4_offset, pci_page.PDPT_offset);
+    if ((pdpte->raw & PDPTE_PRESENT) == 0) {
+        return;
+    }
+
+    PDE* pde = get_pde_address(pci_page.PML4_offset, pci_page.PDPT_offset, pci_page.PD_offset);
+    if ((pde->raw & PDE_PRESENT) == 0) {
+        return;
+    }
+
+    PTE* pte = get_pte_address(pci_page.PML4_offset, pci_page.PDPT_offset, pci_page.PD_offset, pci_page.PT_offset);
+    pte->raw = 0;
+}

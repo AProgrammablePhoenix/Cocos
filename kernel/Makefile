@@ -38,7 +38,7 @@ $(OBJECTSDIR):
 	@mkdir $(OBJECTSDIR)
 $(LIBSDIR):
 	@mkdir $(LIBSDIR)
-devices_csources = src/devices/PS2/keyboard.c src/devices/PS2/keyboard_event.c src/devices/PS2/keypoints.c 
+devices_csources = src/devices/PCI/pci_init.c src/devices/PS2/keyboard.c src/devices/PS2/keyboard_event.c src/devices/PS2/keypoints.c 
 devices_cobjects = $(patsubst src/devices/%.c, objects/devices/%.o,$(devices_csources))
 $(devices_cobjects): objects/devices/%.o: src/devices/%.c | $(OBJECTSDIR)
 	@powershell -Command "mkdir -Force $(@D)" 1> nul
@@ -68,6 +68,15 @@ $(interrupts_asmobjects): objects/interrupts/%.o: src/interrupts/%.asm | $(OBJEC
 lib/interrupts.lib: $(interrupts_cobjects) $(interrupts_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
+klibc_csources = src/klibc/stdlib.c 
+klibc_cobjects = $(patsubst src/klibc/%.c, objects/klibc/%.o,$(klibc_csources))
+$(klibc_cobjects): objects/klibc/%.o: src/klibc/%.c | $(OBJECTSDIR)
+	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@echo Building $@
+	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
+lib/klibc.lib: $(klibc_cobjects) $(klibc_asmobjects) | $(LIBSDIR)
+	@echo Creating $@
+	@$(AR) $@ $^
 mm_csources = src/mm/pmm.c src/mm/vmm.c 
 mm_cobjects = $(patsubst src/mm/%.c, objects/mm/%.o,$(mm_csources))
 $(mm_cobjects): objects/mm/%.o: src/mm/%.c | $(OBJECTSDIR)
@@ -92,9 +101,9 @@ $(screen_cobjects): objects/screen/%.o: src/screen/%.c | $(OBJECTSDIR)
 lib/screen.lib: $(screen_cobjects) $(screen_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-kernel.exe: src/kernel.c lib/devices.lib lib/interrupts.lib lib/mm.lib lib/screen.lib 
+kernel.exe: src/kernel.c lib/devices.lib lib/interrupts.lib lib/klibc.lib lib/mm.lib lib/screen.lib 
 	@echo Building $@
-	@$(CCKER) $(CFLAGS) -Llib -ldevices -linterrupts -lmm -lscreen -o $@ $<
+	@$(CCKER) $(CFLAGS) -Llib -ldevices -linterrupts -lklibc -lmm -lscreen -o $@ $<
 .PHONY: clean
 clean:
 	if exist lib rmdir /Q /S lib

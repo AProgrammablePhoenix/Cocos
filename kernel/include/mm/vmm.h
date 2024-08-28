@@ -115,3 +115,4 @@ void kheap_vfree(void* _address, uint64_t pages);
 void user_vfree(void* _address, uint64_t pages);
 
 void* map_pci_configuration(void* _config_addr);
+void unmap_pci_configuration(void* _config_addr);
