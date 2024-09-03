@@ -20,47 +20,60 @@ typedef int32_t                 INT32;
 typedef uint32_t                UINT32;
 typedef int64_t                 INT64;
 typedef uint64_t                UINT64;
+
+#if (!defined(__cplusplus) && __STDC_VERSION__ >= 202311L) || defined(__clang__)
+
 typedef _BitInt(128)            INT128;
 typedef unsigned _BitInt(128)   UINT128;
+
+#elif defined(__GNUC__)
+
+typedef __int128_t              INT128;
+typedef __uint128_t             UINT128;
+
+#else
+
+#error "Please use Clang, or a compiler supporting GCC extensions"
+
+#endif
+
 typedef uint8_t                 CHAR8;
 typedef char16_t                CHAR16;
 typedef void                    VOID;
 
 typedef struct {
-    UINT32 Data1;
-    UINT16 Data2;
-    UINT16 Data3;
-    UINT8  Data4[8];
+    UINT32  Data1;
+    UINT16  Data2;
+    UINT16  Data3;
+    UINT8   Data4[8];
 } EFI_GUID;
 
-typedef UINTN EFI_STATUS;
-typedef VOID* EFI_HANDLE;
-typedef VOID* EFI_EVENT;
-typedef UINT64 EFI_LBA;
-typedef UINTN EFI_TPL;
+typedef UINTN   EFI_STATUS;
+typedef VOID*   EFI_HANDLE;
+typedef VOID*   EFI_EVENT;
+typedef UINT64  EFI_LBA;
+typedef UINTN   EFI_TPL;
 
 typedef struct {
-    UINT8 Addr[32];
+    UINT8   Addr[32];
 } EFI_MAC_ADDRESS;
 
 typedef struct {
-    UINT8 Addr[4];
+    UINT8   Addr[4];
 } EFI_IPv4_ADDRESS;
 
 typedef struct {
-    UINT8 Addr[16];
+    UINT8   Addr[16];
 } EFI_IPv6_ADDRESS;
 
 typedef union {
-    UINT32 Addr[4];
-    EFI_IPv4_ADDRESS v4;
-    EFI_IPv6_ADDRESS v6;
+    UINT32              Addr[4];
+    EFI_IPv4_ADDRESS    v4;
+    EFI_IPv6_ADDRESS    v6;
 } EFI_IP_ADDRESS;
 
-typedef UINT64 EFI_PHYSICAL_ADDRESS;
-typedef UINT64 EFI_VIRTUAL_ADDRESS;
-
-typedef UINTN EFI_TPL;
+typedef UINT64  EFI_PHYSICAL_ADDRESS;
+typedef UINT64  EFI_VIRTUAL_ADDRESS;
 
 #endif
 
@@ -68,6 +81,13 @@ typedef UINTN EFI_TPL;
 #define OUT
 #define OPTIONAL
 #define CONST const
+#ifdef __cplusplus
+#if defined(__GNUC__) || defined(__clang__)
+#define restrict __restrict__
+#else
+#define restrict
+#endif
+#endif
 
 #define EFIAPI __attribute__((ms_abi))
 
@@ -617,7 +637,13 @@ typedef struct {
     EFI_CONFIGURATION_TABLE         *ConfigurationTable;
 } EFI_SYSTEM_TABLE;
 
-extern EFI_SYSTEM_TABLE* est;
+#ifndef __EFI_STANDALONE__
+
+namespace EFI {
+    extern EFI_SYSTEM_TABLE* sys;
+}
+
+#endif
 
 typedef struct {
     UINT32                      Revision;

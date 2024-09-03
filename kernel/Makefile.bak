@@ -1,0 +1,84 @@
+
+EFI_HEADER_LOC = ../bootloader/include/efi
+
+OBJECTSDIR = objects
+LIBSDIR = lib
+
+CCNOLINK = gcc		                    \
+	-mabi=ms
+
+CXXNOLINK = g++ 	                    \
+	-mabi=ms                			
+
+CCKER = $(CCNOLINK)                     \
+    -Wl,-e,kmain                        \
+    -Wl,-T,linker.ld					\
+	-Wl,--build-id=none
+
+CXXKER = $(CXXNOLINK)                   \
+    -Wl,-e,kmain                        \
+    -Wl,-T,linker.ld					\
+	-Wl,--build-id=none					\
+	-z noexecstack
+
+AR = ar                                 \
+    -rcs
+
+CFLAGS = 								\
+	-std=c2x							\
+	-Wall								\
+	-Wextra								\
+	-Wpedantic 							\
+	-fms-extensions 					\
+	-mno-red-zone 						\
+	-ffreestanding 						\
+	-nostdlib 							\
+	-I$(EFI_HEADER_LOC) 				\
+	-Iinclude							\
+	-D__EFI_STANDALONE__                \
+	-fno-PIE							\
+	-mcmodel=large						\
+	-static								\
+	-fno-exceptions						
+
+CXXFLAGS =							    \
+	-std=c++23						    \
+	-Wall							    \
+	-Wextra							    \
+	-Wpedantic						    \
+	-fms-extensions					    \
+	-mno-red-zone					    \
+	-ffreestanding					    \
+	-nostdlib						    \
+    -I$(EFI_HEADER_LOC)                 \
+	-Iinclude                           \
+    -D__EFI_STANDALONE__				\
+	-fno-PIE							\
+	-mcmodel=large						\
+	-static								\
+	-fno-exceptions						\
+	-fno-rtti
+
+CFASTNOSSE = 							\
+	-Ofast								\
+	-mno-sse
+
+all: kernel.img
+$(OBJECTSDIR):
+	@mkdir $(OBJECTSDIR)
+$(LIBSDIR):
+	@mkdir $(LIBSDIR)
+
+objects/kernel.o: src/kernel.cpp | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -c $< -o $@
+
+kernel.img: objects/kernel.o
+	@echo Building $@
+	@$(CXXKER) $(CXXFLAGS) -Wl,--start-group -Llib -o $@ $< -Wl,--end-group
+.PHONY: clean
+clean:
+	@rm -rf lib
+	@rm -rf objects
+	@rm -f kernel.img
+	@echo Done.

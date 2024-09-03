@@ -4,108 +4,135 @@ EFI_HEADER_LOC = ../bootloader/include/efi
 OBJECTSDIR = objects
 LIBSDIR = lib
 
-CCNOLINK = clang 						\
-	-target x86_64-unknown-windows
+CCNOLINK = gcc		                    \
+	-mabi=ms
 
-AR = ar -cr
+CXXNOLINK = g++ 	                    \
+	-mabi=ms                			
 
-CCKER = $(CCNOLINK) 					\
-	-fuse-ld=lld 						\
-	-Wl,-subsystem:efi_application 		\
-	-Wl,-entry:kmain 					\
-	-Wl,-FIXED,-BASE:0xffff800000000000
+CCKER = $(CCNOLINK)                     \
+    -Wl,-e,kmain                        \
+    -Wl,-T,linker.ld					\
+	-Wl,--build-id=none
+
+CXXKER = $(CXXNOLINK)                   \
+    -Wl,-e,kmain                        \
+    -Wl,-T,linker.ld					\
+	-Wl,--build-id=none					\
+	-z noexecstack
+
+AR = ar                                 \
+    -rcs
 
 CFLAGS = 								\
-	-std=c23							\
+	-std=c2x							\
 	-Wall								\
 	-Wextra								\
 	-Wpedantic 							\
 	-fms-extensions 					\
-	-Wno-microsoft-anon-tag 			\
 	-mno-red-zone 						\
 	-ffreestanding 						\
 	-nostdlib 							\
 	-I$(EFI_HEADER_LOC) 				\
 	-Iinclude							\
-	-D__EFI_STANDALONE__
+	-D__EFI_STANDALONE__                \
+	-fno-PIE							\
+	-mcmodel=large						\
+	-static								\
+	-fno-exceptions						
+
+CXXFLAGS =							    \
+	-std=c++23						    \
+	-Wall							    \
+	-Wextra							    \
+	-Wpedantic						    \
+	-fms-extensions					    \
+	-mno-red-zone					    \
+	-ffreestanding					    \
+	-nostdlib						    \
+    -I$(EFI_HEADER_LOC)                 \
+	-Iinclude                           \
+    -D__EFI_STANDALONE__				\
+	-fno-PIE							\
+	-mcmodel=large						\
+	-static								\
+	-fno-exceptions						\
+	-fno-rtti
 
 CFASTNOSSE = 							\
 	-Ofast								\
 	-mno-sse
 
-all: kernel.exe
+all: kernel.img
 $(OBJECTSDIR):
 	@mkdir $(OBJECTSDIR)
 $(LIBSDIR):
 	@mkdir $(LIBSDIR)
-devices_csources = src/devices/PCI/pci_init.c src/devices/PS2/keyboard.c src/devices/PS2/keyboard_event.c src/devices/PS2/keypoints.c 
-devices_cobjects = $(patsubst src/devices/%.c, objects/devices/%.o,$(devices_csources))
-$(devices_cobjects): objects/devices/%.o: src/devices/%.c | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+devices_cxxsources = src/devices/PS2/Keyboard.cpp src/devices/PS2/KeyboardEvent.cpp src/devices/PS2/Keypoints.cpp 
+devices_cxxobjects = $(patsubst src/devices/%.cpp, objects/devices/%.o,$(devices_cxxsources))
+$(devices_cxxobjects): objects/devices/%.o: src/devices/%.cpp | $(OBJECTSDIR)
+	@mkdir -p $(@D)
 	@echo Building $@
-	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
-devices_asmsources = src/devices/PS2/keyboard_handler_irq.asm 
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+devices_asmsources = src/devices/PS2/controller.asm src/devices/PS2/keyboard_handler_irq.asm 
 devices_asmobjects = $(patsubst src/devices/%.asm, objects/devices/%.o,$(devices_asmsources))
 $(devices_asmobjects): objects/devices/%.o: src/devices/%.asm | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@mkdir -p $(@D)
 	@echo Building $@
-	@nasm -fwin64 $< -o $@
-lib/devices.lib: $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
+	@nasm -felf64 $< -o $@
+lib/devices.lib: $(devices_cxxobjects) $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-interrupts_csources = src/interrupts/core_dump.c src/interrupts/idt.c src/interrupts/kpanic.c src/interrupts/system_timer.c 
-interrupts_cobjects = $(patsubst src/interrupts/%.c, objects/interrupts/%.o,$(interrupts_csources))
-$(interrupts_cobjects): objects/interrupts/%.o: src/interrupts/%.c | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+interrupts_cxxsources = src/interrupts/CoreDump.cpp src/interrupts/idt.cpp src/interrupts/KernelPanic.cpp src/interrupts/SystemTimer.cpp 
+interrupts_cxxobjects = $(patsubst src/interrupts/%.cpp, objects/interrupts/%.o,$(interrupts_cxxsources))
+$(interrupts_cxxobjects): objects/interrupts/%.o: src/interrupts/%.cpp | $(OBJECTSDIR)
+	@mkdir -p $(@D)
 	@echo Building $@
-	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
-interrupts_asmsources = src/interrupts/core_dump_setup.asm src/interrupts/gpr_isr_saving.asm src/interrupts/i8042.asm src/interrupts/i8254.asm src/interrupts/i8259A.asm src/interrupts/kernel_idt.asm src/interrupts/system_timer_irq.asm src/interrupts/core/align_error.asm src/interrupts/core/bound_error.asm src/interrupts/core/breakpoint_trap.asm src/interrupts/core/controlprotection_error.asm src/interrupts/core/coprocoseg_error.asm src/interrupts/core/debug_trap.asm src/interrupts/core/device_error.asm src/interrupts/core/dfault_abort.asm src/interrupts/core/divide_error.asm src/interrupts/core/gp_error.asm src/interrupts/core/hypervirt_error.asm src/interrupts/core/invalidop_error.asm src/interrupts/core/invalidtss_error.asm src/interrupts/core/machine_error.asm src/interrupts/core/nmi_error.asm src/interrupts/core/overflow_trap.asm src/interrupts/core/page_error.asm src/interrupts/core/security_error.asm src/interrupts/core/segpresence_error.asm src/interrupts/core/simd_error.asm src/interrupts/core/stack_error.asm src/interrupts/core/virt_error.asm src/interrupts/core/vmmcom_error.asm src/interrupts/core/x87fp_error.asm 
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+interrupts_asmsources = src/interrupts/CoreDumpSetup.asm src/interrupts/gpr_isr_saving.asm src/interrupts/idt_load.asm src/interrupts/pic.asm src/interrupts/pit.asm src/interrupts/system_timer_irq.asm src/interrupts/core/align_error.asm src/interrupts/core/bound_error.asm src/interrupts/core/breakpoint_trap.asm src/interrupts/core/controlprotection_error.asm src/interrupts/core/coprocoseg_error.asm src/interrupts/core/debug_trap.asm src/interrupts/core/device_error.asm src/interrupts/core/dfault_abort.asm src/interrupts/core/divide_error.asm src/interrupts/core/gp_error.asm src/interrupts/core/hypervirt_error.asm src/interrupts/core/invalidop_error.asm src/interrupts/core/invalidtss_error.asm src/interrupts/core/machine_error.asm src/interrupts/core/nmi_error.asm src/interrupts/core/overflow_trap.asm src/interrupts/core/page_error.asm src/interrupts/core/security_error.asm src/interrupts/core/segpresence_error.asm src/interrupts/core/simd_error.asm src/interrupts/core/stack_error.asm src/interrupts/core/virt_error.asm src/interrupts/core/vmmcom_error.asm src/interrupts/core/x87fp_error.asm 
 interrupts_asmobjects = $(patsubst src/interrupts/%.asm, objects/interrupts/%.o,$(interrupts_asmsources))
 $(interrupts_asmobjects): objects/interrupts/%.o: src/interrupts/%.asm | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@mkdir -p $(@D)
 	@echo Building $@
-	@nasm -fwin64 $< -o $@
-lib/interrupts.lib: $(interrupts_cobjects) $(interrupts_asmobjects) | $(LIBSDIR)
+	@nasm -felf64 $< -o $@
+lib/interrupts.lib: $(interrupts_cxxobjects) $(interrupts_cobjects) $(interrupts_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-klibc_csources = src/klibc/stdlib.c 
-klibc_cobjects = $(patsubst src/klibc/%.c, objects/klibc/%.o,$(klibc_csources))
-$(klibc_cobjects): objects/klibc/%.o: src/klibc/%.c | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+mm_cxxsources = src/mm/Heap.cpp src/mm/PhysicalMemory.cpp src/mm/VirtualMemory.cpp 
+mm_cxxobjects = $(patsubst src/mm/%.cpp, objects/mm/%.o,$(mm_cxxsources))
+$(mm_cxxobjects): objects/mm/%.o: src/mm/%.cpp | $(OBJECTSDIR)
+	@mkdir -p $(@D)
 	@echo Building $@
-	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
-lib/klibc.lib: $(klibc_cobjects) $(klibc_asmobjects) | $(LIBSDIR)
-	@echo Creating $@
-	@$(AR) $@ $^
-mm_csources = src/mm/pmm.c src/mm/vmm.c 
-mm_cobjects = $(patsubst src/mm/%.c, objects/mm/%.o,$(mm_csources))
-$(mm_cobjects): objects/mm/%.o: src/mm/%.c | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
-	@echo Building $@
-	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
-mm_asmsources = src/mm/kernel_gdt.asm 
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+mm_asmsources = src/mm/gdt.asm 
 mm_asmobjects = $(patsubst src/mm/%.asm, objects/mm/%.o,$(mm_asmsources))
 $(mm_asmobjects): objects/mm/%.o: src/mm/%.asm | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+	@mkdir -p $(@D)
 	@echo Building $@
-	@nasm -fwin64 $< -o $@
-lib/mm.lib: $(mm_cobjects) $(mm_asmobjects) | $(LIBSDIR)
+	@nasm -felf64 $< -o $@
+lib/mm.lib: $(mm_cxxobjects) $(mm_cobjects) $(mm_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-screen_csources = src/screen/tty.c 
-screen_cobjects = $(patsubst src/screen/%.c, objects/screen/%.o,$(screen_csources))
-$(screen_cobjects): objects/screen/%.o: src/screen/%.c | $(OBJECTSDIR)
-	@powershell -Command "mkdir -Force $(@D)" 1> nul
+screen_cxxsources = src/screen/Log.cpp 
+screen_cxxobjects = $(patsubst src/screen/%.cpp, objects/screen/%.o,$(screen_cxxsources))
+$(screen_cxxobjects): objects/screen/%.o: src/screen/%.cpp | $(OBJECTSDIR)
+	@mkdir -p $(@D)
 	@echo Building $@
-	@$(CCNOLINK) $(CFLAGS) $(CFASTNOSSE) -o $@ -c $<
-lib/screen.lib: $(screen_cobjects) $(screen_asmobjects) | $(LIBSDIR)
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+lib/screen.lib: $(screen_cxxobjects) $(screen_cobjects) $(screen_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-kernel.exe: src/kernel.c lib/devices.lib lib/interrupts.lib lib/klibc.lib lib/mm.lib lib/screen.lib 
+_cxx_sources = src/kernel.cpp 
+_cxx_objects = $(patsubst src/%.cpp,objects/%.o,$(_cxx_sources))
+$(_cxx_objects): objects/%.o: src/%.cpp | $(OBJECTSDIR)
 	@echo Building $@
-	@$(CCKER) $(CFLAGS) -Llib -ldevices -linterrupts -lklibc -lmm -lscreen -o $@ $<
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+kernel.img: $(_cxx_objects) lib/devices.lib lib/interrupts.lib lib/mm.lib lib/screen.lib 
+	@echo Building $@
+	@$(CXXKER) $(CXXFLAGS) -Wl,--start-group -Llib -l:devices.lib -l:interrupts.lib -l:mm.lib -l:screen.lib -o $@ $< -Wl,--end-group
 .PHONY: clean
 clean:
-	if exist lib rmdir /Q /S lib
-	if exist objects rmdir /Q /S objects
-	if exist kernel.exe del /Q /S kernel.exe
+	@rm -rf lib
+	@rm -rf objects
+	@rm -f kernel.img
+	@echo Done.

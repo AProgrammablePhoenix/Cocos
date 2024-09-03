@@ -1,97 +1,120 @@
-SOURCE = loader_main.c
-SOURCE_INIT = pre_setup.asm
-TARGET = BOOTX64.EFI
-TARGET_INIT = pre_setup.o
+MAIN = loader_main.cpp
+MAIN_INIT = pre_setup.asm
 
+MAIN_OBJECT = loader_main.o
+MAIN_INIT_OBJECT = pre_setup.o
+
+TARGET = BOOTX64.EFI
 SRCDIR = src
 OBJECTSDIR = objects
 LIBSDIR = lib
 
-CCNOLINK = clang \
-	-target x86_64-unknown-windows
+CCNOLINK = x86_64-w64-mingw32-gcc 	\
+	-mabi=ms
 
-CC = $(CCNOLINK) \
-	-fuse-ld=lld \
-	-Wl,-subsystem:efi_application \
-	-Wl,-entry:efi_main
+CXXNOLINK = x86_64-w64-mingw32-g++ 	\
+	-mabi=ms
 
-AR = ar \
-	-cr
+CC = $(CCNOLINK) 					\
+	-Wl,-subsystem,10 				\
+	-Wl,-e,efi_main
 
-CFLAGS = \
-	-std=c23 \
-	-Wall \
-	-Wextra \
-	-Wpedantic \
-	-fms-extensions \
-	-Wno-microsoft-anon-tag \
-	-mno-red-zone \
-	-ffreestanding \
-	-nostdlib \
+CXX = $(CXXNOLINK)					\
+	-Wl,-subsystem,10				\
+	-Wl,-e,efi_main
+
+AR = ar 							\
+	-rcs
+
+CFLAGS = 							\
+	-std=c23 						\
+	-Wall 							\
+	-Wextra 						\
+	-Wpedantic 						\
+	-fms-extensions 				\
+	-mno-red-zone 					\
+	-ffreestanding 					\
+	-nostdlib 						\
 	-Iinclude
 
+CXXFLAGS =							\
+	-std=c++23						\
+	-Wall							\
+	-Wextra							\
+	-Wpedantic						\
+	-fms-extensions					\
+	-mno-red-zone					\
+	-ffreestanding					\
+	-nostdlib						\
+	-Iinclude
 
 all: $(TARGET)
 
 $(OBJECTSDIR):
-	@mkdir $(OBJECTSDIR)\stdiok
-	@mkdir $(OBJECTSDIR)\stdlibk
-	@mkdir $(OBJECTSDIR)\efi
-	@mkdir $(OBJECTSDIR)\loader
+	@mkdir -p $(OBJECTSDIR)/ldstdio
+	@mkdir -p $(OBJECTSDIR)/ldstdlib
+	@mkdir -p $(OBJECTSDIR)/efi
+	@mkdir -p $(OBJECTSDIR)/loader
 
 $(LIBSDIR):
-	@mkdir $(LIBSDIR)
+	@mkdir -p $(LIBSDIR)
 
-stdiok_sources=$(wildcard $(SRCDIR)/stdiok/*.c)
-stdiok_objects=$(patsubst $(SRCDIR)/stdiok/%.c,$(OBJECTSDIR)/stdiok/%.o,$(stdiok_sources))
+ldstdio_sources=$(wildcard $(SRCDIR)/ldstdio/*.cpp)
+ldstdio_objects=$(patsubst $(SRCDIR)/ldstdio/%.cpp,$(OBJECTSDIR)/ldstdio/%.o,$(ldstdio_sources))
 
-$(stdiok_objects): $(OBJECTSDIR)/stdiok/%.o: $(SRCDIR)/stdiok/%.c | $(OBJECTSDIR)
-	@echo Building $^
-	@$(CCNOLINK) $(CFLAGS) -c $^ -o $@
+$(ldstdio_objects): $(OBJECTSDIR)/ldstdio/%.o: $(SRCDIR)/ldstdio/%.cpp | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -c $< -o $@
 
-stdlibk_sources=$(wildcard $(SRCDIR)/stdlibk/*.c)
-stdlibk_objects=$(patsubst $(SRCDIR)/stdlibk/%.c,$(OBJECTSDIR)/stdlibk/%.o,$(stdlibk_sources))
+ldstdlib_sources=$(wildcard $(SRCDIR)/ldstdlib/*.cpp)
+ldstdlib_objects=$(patsubst $(SRCDIR)/ldstdlib/%.cpp,$(OBJECTSDIR)/ldstdlib/%.o,$(ldstdlib_sources))
 
-$(stdlibk_objects): $(OBJECTSDIR)/stdlibk/%.o: $(SRCDIR)/stdlibk/%.c | $(OBJECTSDIR)
-	@echo Building $^
-	@$(CCNOLINK) $(CFLAGS) -c $^ -o $@	
+$(ldstdlib_objects): $(OBJECTSDIR)/ldstdlib/%.o: $(SRCDIR)/ldstdlib/%.cpp | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -c $< -o $@
 
-$(LIBSDIR)/libck.lib: $(stdlibk_objects) $(stdiok_objects) | $(LIBSDIR)
+$(LIBSDIR)/ldlibc.lib: $(ldstdio_objects) $(ldstdlib_objects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
 
-efilib_sources=$(wildcard $(SRCDIR)/efi/*.c)
-efilib_objects=$(patsubst $(SRCDIR)/efi/%.c,$(OBJECTSDIR)/efi/%.o,$(efilib_sources))
+efilib_sources=$(wildcard $(SRCDIR)/efi/*.cpp)
+efilib_objects=$(patsubst $(SRCDIR)/efi/%.cpp,$(OBJECTSDIR)/efi/%.o,$(efilib_sources))
 
-$(efilib_objects): $(OBJECTSDIR)/efi/%.o: $(SRCDIR)/efi/%.c | $(OBJECTSDIR)
-	@echo Building $^
-	@$(CCNOLINK) $(CFLAGS) -c $^ -o $@
+$(efilib_objects): $(OBJECTSDIR)/efi/%.o: $(SRCDIR)/efi/%.cpp | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -c $< -o $@
 
 $(LIBSDIR)/efi.lib: $(efilib_objects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
 
-loaderlib_sources=$(wildcard $(SRCDIR)/loader/*.c)
-loaderlib_objects=$(patsubst $(SRCDIR)/loader/%.c,$(OBJECTSDIR)/loader/%.o,$(loaderlib_sources))
+loaderlib_sources=$(wildcard $(SRCDIR)/loader/*.cpp)
+loaderlib_objects=$(patsubst $(SRCDIR)/loader/%.cpp,$(OBJECTSDIR)/loader/%.o,$(loaderlib_sources))
 
-$(loaderlib_objects): $(OBJECTSDIR)/loader/%.o: $(SRCDIR)/loader/%.c | $(OBJECTSDIR)
-	@echo Building $^
-	@$(CCNOLINK) $(CFLAGS) -c $^ -o $@
+$(loaderlib_objects): $(OBJECTSDIR)/loader/%.o: $(SRCDIR)/loader/%.cpp | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -c $< -o $@
 
 $(LIBSDIR)/loader.lib: $(loaderlib_objects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
 
-$(OBJECTSDIR)/$(TARGET_INIT): $(SRCDIR)/$(SOURCE_INIT) | $(OBJECTSDIR)
-	@echo Building $<
+$(OBJECTSDIR)/$(MAIN_INIT_OBJECT): $(SRCDIR)/$(MAIN_INIT) | $(OBJECTSDIR)
+	@echo Building $@
 	@nasm -fwin64 $< -o $@
 
-$(TARGET): $(SRCDIR)/$(SOURCE) $(OBJECTSDIR)/$(TARGET_INIT) $(LIBSDIR)/libck.lib $(LIBSDIR)/efi.lib $(LIBSDIR)/loader.lib
-	@echo Building $<
-	@$(CC) $(CFLAGS) -L$(LIBSDIR) -llibck -lefi -lloader -o $@ $(OBJECTSDIR)/$(TARGET_INIT) $<
+$(OBJECTSDIR)/$(MAIN_OBJECT): $(SRCDIR)/$(MAIN) | $(OBJECTSDIR)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) -o $@ -c $<
+
+$(TARGET): $(OBJECTSDIR)/$(MAIN_OBJECT) $(OBJECTSDIR)/$(MAIN_INIT_OBJECT) $(LIBSDIR)/ldlibc.lib $(LIBSDIR)/efi.lib $(LIBSDIR)/loader.lib
+	@echo Creating $@
+	@$(CXX) $(CXXFLAGS) -s -L$(LIBSDIR) -Wl,--start-group -l:efi.lib -l:ldlibc.lib -l:loader.lib -o $@ $(OBJECTSDIR)/$(MAIN_INIT_OBJECT) $< -Wl,--end-group
+	@strip -R .idata -R .pdata -R .xdata $(TARGET)
 
 .PHONY: clean
 clean:
-	if exist lib rmdir /Q /S lib
-	if exist objects rmdir /Q /S objects
-	if exist BOOTX64.EFI del BOOTX64.EFI
+	@rm -rf lib
+	@rm -rf objects
+	@rm -f BOOTX64.EFI
+	@echo Done.
