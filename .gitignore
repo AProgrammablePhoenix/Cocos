@@ -6,5 +6,6 @@ ImageTools/
 /*.py
 *.EFI
 *.exe
+*.img
 **/objects/
 **/lib
