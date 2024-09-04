@@ -3,8 +3,12 @@ OUTPUT_ARCH(i386:x86-64)
 ENTRY(kmain)
 
 SECTIONS {
+    . = 0x00000000C0000000;
+    .userembedded ALIGN(0x1000) : {
+        *(.userembedded*)
+    }
     . = 0xffff800000000000;
-    .text ALIGN(0x1000) : AT(0xffff800000000000) {
+    .text ALIGN(0x1000) : {
         *(.text*)
     }
     .data ALIGN(0x1000) : {
