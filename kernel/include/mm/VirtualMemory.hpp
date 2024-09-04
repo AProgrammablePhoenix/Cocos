@@ -157,6 +157,7 @@ namespace VirtualMemory {
 	}
 
 	StatusCode Setup();
+	StatusCode SetupTask();
 
 	void* AllocateDMA(uint64_t pages);
 	void* AllocateKernelHeap(uint64_t pages);

@@ -187,7 +187,7 @@ namespace VirtualMemory {
 				return StatusCode::OUT_OF_MEMORY;
 			}
 
-			return mapPage(start + blocks * sizeof(VMemMapBlock), reinterpret_cast<uint64_t>(page), AccessPrivilege::HIGH);
+			return mapPage(reinterpret_cast<uint64_t>(page), start + blocks * sizeof(VMemMapBlock), AccessPrivilege::HIGH);
 		}
 
 		// sorts (to the right) by descending number of available pages
@@ -351,6 +351,7 @@ namespace VirtualMemory {
 								sortVirtualMemoryMap(vmmb, ctx->storedBlocks - index);
 								rsortVirtualMemoryMap(splitResidue, ctx->storedBlocks);
 								ctx->availableMemory -= pages * PhysicalMemory::FRAME_SIZE;
+								ctx->availableBlockMemory -= sizeof(VMemMapBlock);
 
 								return hintPtr;
 							}
@@ -545,8 +546,8 @@ namespace VirtualMemory {
 		}
 
 		status = mapPage(
-			VirtualMemoryLayout::KERNEL_STACK_RESERVE - PhysicalMemory::FRAME_SIZE,
 			reinterpret_cast<uint64_t>(stackTop),
+			VirtualMemoryLayout::KERNEL_STACK_RESERVE - PhysicalMemory::FRAME_SIZE,
 			AccessPrivilege::HIGH
 		);
 		if (status != StatusCode::SUCCESS) {
@@ -554,8 +555,8 @@ namespace VirtualMemory {
 		}
 
 		status = mapPage(
-			VirtualMemoryLayout::KERNEL_STACK_RESERVE,
 			reinterpret_cast<uint64_t>(stackReserve),
+			VirtualMemoryLayout::KERNEL_STACK_RESERVE,
 			AccessPrivilege::HIGH
 		);
 		if (status != StatusCode::SUCCESS) {
@@ -568,11 +569,65 @@ namespace VirtualMemory {
 			VirtualMemoryLayout::PROCESS_CONTEXT_SIZE / PhysicalMemory::FRAME_SIZE,
 			AccessPrivilege::HIGH
 		);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
+		// allocate two pages for the main and secondary core dump zones
+		VirtualAddress mainDumpMapping = parseVirtualAddress(VirtualMemoryLayout::MAIN_CORE_DUMP);
+		PTE* mainDumpPTE = getPTEAddress(
+			mainDumpMapping.PML4_offset,
+			mainDumpMapping.PDPT_offset,
+			mainDumpMapping.PD_offset,
+			mainDumpMapping.PT_offset
+		);
+		void* mainDumpPage = PhysicalMemory::Allocate();
+		if (mainDumpPage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+		mainDumpPTE->raw = PTE_XD
+			| (PhysicalMemory::FilterAddress(mainDumpPage) & PTE_ADDRESS)
+			| PTE_READWRITE
+			| PTE_PRESENT;
+
+		VirtualAddress secondaryDumpMapping = parseVirtualAddress(VirtualMemoryLayout::SECONDARY_CORE_DUMP);
+		PTE* secondaryDumpPTE = getPTEAddress(
+			secondaryDumpMapping.PML4_offset,
+			secondaryDumpMapping.PDPT_offset,
+			secondaryDumpMapping.PD_offset,
+			secondaryDumpMapping.PT_offset
+		);
+		void* secondaryDumpPage = PhysicalMemory::Allocate();
+		if (secondaryDumpPage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+		secondaryDumpPTE->raw = PTE_XD
+			| (PhysicalMemory::FilterAddress(secondaryDumpPage) & PTE_ADDRESS)
+			| PTE_READWRITE
+			| PTE_PRESENT;
 
 		// set up the user memory 
-		
+		void* basePage = PhysicalMemory::Allocate();
+		if (basePage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
 
-		return status;
+		status = mapPage(reinterpret_cast<uint64_t>(basePage), VirtualMemoryLayout::USER_MEMORY_CONTEXT, AccessPrivilege::HIGH);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
+		userContext->availableMemory = VirtualMemoryLayout::USER_MEMORY_SIZE;
+		userContext->availableBlockMemory = PhysicalMemory::FRAME_SIZE 
+			- sizeof(VMemMapBlock) 
+			- (VirtualMemoryLayout::USER_MEMORY_MANAGEMENT - VirtualMemoryLayout::USER_MEMORY_CONTEXT);
+		userContext->storedBlocks = 1;
+
+		VMemMapBlock* userMemoryBlockPtr = reinterpret_cast<VMemMapBlock*>(VirtualMemoryLayout::USER_MEMORY_MANAGEMENT);
+		userMemoryBlockPtr->virtualStart = VirtualMemoryLayout::USER_MEMORY;
+		userMemoryBlockPtr->availablePages = userContext->availableMemory / PhysicalMemory::FRAME_SIZE;
+
+		return StatusCode::SUCCESS;
 	}
 
 	void* AllocateDMA(uint64_t pages) {

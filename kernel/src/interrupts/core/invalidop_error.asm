@@ -1,7 +1,7 @@
 BITS 64
 
 extern kpanic
-extern core_dump_setup
+extern main_core_dump
 
 global int_invalidop_error
 
@@ -11,7 +11,7 @@ error_msg:
 
 section .text
 int_invalidop_error:
-    call core_dump_setup
+    call main_core_dump
     lea rcx, [rel error_msg]
     xor edx, edx
     call kpanic

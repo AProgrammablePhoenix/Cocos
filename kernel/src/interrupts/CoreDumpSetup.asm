@@ -1,74 +1,118 @@
 BITS 64
 
-%define EFER_MSR_NUMBER 0xC0000080
+; storage size: 32 KB
+%define MAIN_STORAGE            0xFFFFFF8001000000         
+%define SECONDARY_STORAGE       0xFFFFFF8001008000
 
-extern core_dump_registers
+%define USE_MAIN_STORAGE        0xF1827
+%define USE_SECONDARY_STORAGE   0x26304
 
-global core_dump_setup
+%define EFER_MSR_NUMBER         0xC0000080
+
+global main_core_dump
+global secondary_core_dump
+global request_dump_type
+
+section .data
+temp:
+    dq 0
+mode:
+    dq 0
 
 section .text
 core_dump_setup:
-    mov [rel core_dump_registers + 0x000], rax
-    mov [rel core_dump_registers + 0x008], rbx
-    mov [rel core_dump_registers + 0x010], rcx
-    mov [rel core_dump_registers + 0x018], rdx
-    mov [rel core_dump_registers + 0x020], rsi
-    mov [rel core_dump_registers + 0x028], rdi
-    mov [rel core_dump_registers + 0x030], rbp
-    mov rax, [rsp + 0x20]
-    mov [rel core_dump_registers + 0x038], rax
-    mov [rel core_dump_registers + 0x040], r8
-    mov [rel core_dump_registers + 0x048], r9
-    mov [rel core_dump_registers + 0x050], r10
-    mov [rel core_dump_registers + 0x058], r11
-    mov [rel core_dump_registers + 0x060], r12
-    mov [rel core_dump_registers + 0x068], r13
-    mov [rel core_dump_registers + 0x070], r14
-    mov [rel core_dump_registers + 0x078], r15
-    mov rax, [rsp + 0x8]
-    mov [rel core_dump_registers + 0x080], rax
-    mov rax, [rsp + 0x18]
-    mov [rel core_dump_registers + 0x088], rax
-    mov ax, es
-    mov [rel core_dump_registers + 0x090], ax
-    mov rax, [rsp + 0x10]
-    mov [rel core_dump_registers + 0x092], ax
-    mov rax, [rsp + 0x28]
-    mov [rel core_dump_registers + 0x094], ax
-    mov ax, ds
-    mov [rel core_dump_registers + 0x096], ax
-    mov ax, fs
-    mov [rel core_dump_registers + 0x098], ax
-    mov ax, gs
-    mov [rel core_dump_registers + 0x09A], ax
-    sldt [rel core_dump_registers + 0x0A0]
-    str  [rel core_dump_registers + 0x0A2]
-    sgdt [rel core_dump_registers + 0x0B0]
-    sidt [rel core_dump_registers + 0x0C0]
-    mov rax, cr0
-    mov [rel core_dump_registers + 0x0D0], rax
-    mov rax, cr2
-    mov [rel core_dump_registers + 0x0D8], rax
-    mov rax, cr3
-    mov [rel core_dump_registers + 0x0E0], rax
-    mov rax, cr4
-    mov [rel core_dump_registers + 0x0E8], rax
-    mov rax, cr8
-    mov [rel core_dump_registers + 0x0F0], rax
+    cmp QWORD [rel mode], USE_SECONDARY_STORAGE
+    jne .L0
+    mov [rel temp], rax
+    mov rax, SECONDARY_STORAGE
+    xchg [rel temp], rax
+    jmp .L1
+.L0:
+    mov [rel temp], rax
+    mov rax, MAIN_STORAGE
+    xchg [rel temp], rax
+.L1:
+    xchg [rel temp], rbx
+    mov [rbx], rax
+    mov rax, rbx
+    mov rbx, [rel temp]
+    mov [rax + 0x08], rbx
+    mov [rax + 0x10], rcx
+    mov [rax + 0x18], rdx
+    mov [rax + 0x20], rsi
+    mov [rax + 0x28], rdi
+    mov [rax + 0x30], rbp
+    mov rcx, [rsp + 0x20]   ; RSP
+    mov [rax + 0x38], rcx
+    mov [rax + 0x40], r8
+    mov [rax + 0x48], r9
+    mov [rax + 0x50], r10
+    mov [rax + 0x58], r11
+    mov [rax + 0x60], r12
+    mov [rax + 0x68], r13
+    mov [rax + 0x70], r14
+    mov [rax + 0x78], r15
+    mov rcx, [rsp + 0x8]    ; RIP
+    mov [rax + 0x80], rcx
+    mov rcx, [rsp + 0x18]   ; RFLAGS
+    mov [rax + 0x88], rcx
+    mov [rax + 0x90], es
+    mov rcx, [rsp + 0x10]   ; CS
+    mov [rax + 0x92], cx
+    mov rcx, [rsp + 0x28]   ; SS
+    mov [rax + 0x94], cx
+    mov [rax + 0x96], ds
+    mov [rax + 0x98], fs
+    mov [rax + 0x9A], gs
+    sldt [rax + 0x9C]
+    str [rax + 0x9E]
+    sgdt [rax + 0xA0]
+    sidt [rax + 0xAA]
+    mov dx, [rax + 0xAA]
+    mov r8, [rax + 0xA2]
+    mov r9, [rax + 0xAC]
+    mov [rax + 0xA2], dx
+    mov [rax + 0xA8], r8
+    mov [rax + 0xB0], r9
+    mov rcx, cr0
+    mov rdx, cr2
+    mov r8, cr3
+    mov r9, cr4
+    mov r10, cr8
+    mov [rax + 0xB8], rcx
+    mov [rax + 0xC0], rdx
+    mov [rax + 0xC8], r8
+    mov [rax + 0xD0], r9
+    mov [rax + 0xD8], r10
+    mov r8, rax
     mov ecx, EFER_MSR_NUMBER
     rdmsr
-    mov [rel core_dump_registers + 0x0F8], eax
-    mov [rel core_dump_registers + 0x0FC], edx
-    mov rax, dr0
-    mov [rel core_dump_registers + 0x100], rax
-    mov rax, dr1
-    mov [rel core_dump_registers + 0x108], rax
-    mov rax, dr2
-    mov [rel core_dump_registers + 0x110], rax
-    mov rax, dr3
-    mov [rel core_dump_registers + 0x118], rax
-    mov rax, dr6
-    mov [rel core_dump_registers + 0x120], rax
-    mov rax, dr7
-    mov [rel core_dump_registers + 0x128], rax
+    mov [r8 + 0xE0], eax
+    mov [r8 + 0xE4], edx
+    mov rax, r8
+    mov rcx, dr0
+    mov rdx, dr1
+    mov r8, dr2
+    mov r9, dr3
+    mov r10, dr6
+    mov r11, dr7
+    mov [rax + 0xE8], rcx
+    mov [rax + 0xF0], rdx
+    mov [rax + 0xF8], r8
+    mov [rax + 0x100], r9
+    mov [rax + 0x108], r10
+    mov [rax + 0x110], r11
+
+    ret
+
+main_core_dump:
+    mov QWORD [rel mode], USE_MAIN_STORAGE
+    jmp core_dump_setup
+
+secondary_core_dump:
+    mov QWORD [rel mode], USE_SECONDARY_STORAGE
+    jmp core_dump_setup
+
+request_dump_type:
+    mov rax, [rel mode]
     ret

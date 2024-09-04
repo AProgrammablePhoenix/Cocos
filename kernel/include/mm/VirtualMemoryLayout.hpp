@@ -30,6 +30,8 @@ namespace VirtualMemoryLayout {
 	inline constexpr uint64_t KERNEL_STACK_USABLE		= 0xFFFFFF8000001000;
 	inline constexpr uint64_t KERNEL_STACK_RESERVE		= 0xFFFFFF80000FF000;
 	inline constexpr uint64_t PROCESS_CONTEXT			= 0xFFFFFF8001000000;
+	inline constexpr uint64_t MAIN_CORE_DUMP 			= 0xFFFFFF8001000000;
+	inline constexpr uint64_t SECONDARY_CORE_DUMP 		= 0xFFFFFF8001008000;
 	inline constexpr uint64_t USER_MEMORY_CONTEXT		= 0xFFFFFF8001100000;
 	inline constexpr uint64_t USER_MEMORY_MANAGEMENT	= 0xFFFFFF8001100020;
 
@@ -62,6 +64,7 @@ namespace VirtualMemoryLayout {
 	inline constexpr uint64_t KERNEL_STACK_USABLE_SIZE		= 0x00000000000FE000;
 	inline constexpr uint64_t KERNEL_STACK_RESERVE_SIZE		= 0x0000000000001000;
 	inline constexpr uint64_t PROCESS_CONTEXT_SIZE			= 0x0000000000100000;
+	inline constexpr uint64_t CORE_DUMP_SIZE 				= 0x0000000000008000;
 	inline constexpr uint64_t USER_MEMORY_MANAGEMENT_SIZE	= 0x0000007FFEF00000;
 
 	/// offsets in OS_BOOT_DATA

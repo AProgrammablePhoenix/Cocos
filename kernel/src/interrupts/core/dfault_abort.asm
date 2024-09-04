@@ -1,7 +1,7 @@
 BITS 64
 
 extern kpanic
-extern core_dump_setup
+extern secondary_core_dump
 
 global int_doublefault_error
 
@@ -18,7 +18,7 @@ int_doublefault_error:
     mov [rel temp], rax
     pop rax
     xchg [rel temp], rax
-    call core_dump_setup
+    call secondary_core_dump
     lea rcx, [rel error_msg]
     mov rdx, [rel temp]
     call kpanic

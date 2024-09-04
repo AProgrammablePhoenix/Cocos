@@ -1,7 +1,7 @@
 BITS 64
 
 extern kpanic
-extern core_dump_setup
+extern main_core_dump
 
 global int_vmmcom_error
 
@@ -18,7 +18,7 @@ int_vmmcom_error:
     mov [rel temp], rax
     pop rax
     xchg [rel temp], rax
-    call core_dump_setup
+    call main_core_dump
     lea rcx, [rel error_msg]
     mov rdx, [rel temp]
     call kpanic
