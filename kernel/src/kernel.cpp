@@ -110,7 +110,5 @@ extern "C" int kmain() {
 
     SetupPS2Keyboard();
 
-    __asm__ volatile("sti");
-
     while (1);
 }

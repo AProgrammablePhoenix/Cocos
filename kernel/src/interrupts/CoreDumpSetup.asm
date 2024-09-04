@@ -11,6 +11,10 @@ BITS 64
 
 global main_core_dump
 global secondary_core_dump
+
+global main_core_reload
+global secondary_core_reload
+
 global request_dump_type
 
 section .data
@@ -112,6 +116,44 @@ main_core_dump:
 secondary_core_dump:
     mov QWORD [rel mode], USE_SECONDARY_STORAGE
     jmp core_dump_setup
+
+core_reload_setup:
+    cmp QWORD [rel mode], USE_SECONDARY_STORAGE
+    jne .L0
+    mov rax, SECONDARY_STORAGE
+    jmp .L1
+.L0:
+    mov rax, MAIN_STORAGE
+.L1:
+    mov gs, [rax + 0x9A]
+    mov fs, [rax + 0x98]
+    mov ds, [rax + 0x96]
+    mov es, [rax + 0x90]
+    mov r15, [rax + 0x78]
+    mov r14, [rax + 0x70]
+    mov r13, [rax + 0x68]
+    mov r12, [rax + 0x60]
+    mov r11, [rax + 0x58]
+    mov r10, [rax + 0x50]
+    mov r9, [rax + 0x48]
+    mov r8, [rax + 0x40]
+    mov rbp, [rax + 0x30]
+    mov rdi, [rax + 0x28]
+    mov rsi, [rax + 0x20]
+    mov rdx, [rax + 0x18]
+    mov rcx, [rax + 0x10]
+    mov rbx, [rax + 0x08]
+    mov rax, [rax]
+    
+    ret
+
+main_core_reload:
+    mov QWORD [rel mode], USE_MAIN_STORAGE
+    jmp core_reload_setup
+
+secondary_core_reload:
+    mov QWORD [rel mode], USE_SECONDARY_STORAGE
+    jmp core_reload_setup
 
 request_dump_type:
     mov rax, [rel mode]

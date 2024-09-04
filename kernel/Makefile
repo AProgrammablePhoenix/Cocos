@@ -83,7 +83,7 @@ $(devices_asmobjects): objects/devices/%.o: src/devices/%.asm | $(OBJECTSDIR)
 lib/devices.lib: $(devices_cxxobjects) $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-interrupts_cxxsources = src/interrupts/CoreDump.cpp src/interrupts/idt.cpp src/interrupts/KernelPanic.cpp src/interrupts/SystemTimer.cpp 
+interrupts_cxxsources = src/interrupts/CoreDump.cpp src/interrupts/idt.cpp src/interrupts/KernelPanic.cpp src/interrupts/SystemTimer.cpp src/interrupts/core/PageFault.cpp 
 interrupts_cxxobjects = $(patsubst src/interrupts/%.cpp, objects/interrupts/%.o,$(interrupts_cxxsources))
 $(interrupts_cxxobjects): objects/interrupts/%.o: src/interrupts/%.cpp | $(OBJECTSDIR)
 	@mkdir -p $(@D)
