@@ -202,8 +202,6 @@ extern "C" int EFIAPI efi_main(EFI_HANDLE handle, EFI_SYSTEM_TABLE* _sys) {
 
     const static uint64_t boot_data_version = 1;
 
-    // TODO: fix the loader to load the new Loader Info at the right place.
-
     __asm__ volatile("mov %0, %%rax" :: "m"(KernelLI.EntryPoint));
     __asm__ volatile("mov %0, %%rdx" :: "m"(boot_data_version) : "rdx");
     __asm__ volatile("callq *%rax");
