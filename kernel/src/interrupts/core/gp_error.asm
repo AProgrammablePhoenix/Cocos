@@ -21,5 +21,7 @@ int_gp_error:
     call main_core_dump
     lea rcx, [rel error_msg]
     mov rdx, [rel temp]
+    sub rsp, 8
     call kpanic
+    add rsp, 8
     iretq

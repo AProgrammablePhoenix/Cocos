@@ -21,6 +21,8 @@ int_doublefault_error:
     call secondary_core_dump
     lea rcx, [rel error_msg]
     mov rdx, [rel temp]
+    sub rsp, 8
     call kpanic
+    add rsp, 8
     iretq
     

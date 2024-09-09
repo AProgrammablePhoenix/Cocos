@@ -14,6 +14,8 @@ int_simd_error:
     call main_core_dump
     lea rcx, [rel error_msg]
     xor edx, edx
+    sub rsp, 8
     call kpanic
+    add rsp, 8
     iretq
     

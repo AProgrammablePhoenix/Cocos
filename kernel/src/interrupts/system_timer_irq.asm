@@ -1,7 +1,7 @@
 BITS 64
 
-extern isr_context_save
-extern isr_context_restore
+extern main_core_dump
+extern main_core_reload
 extern system_timer_event_handler
 
 global PIT_IRQ0_handler
@@ -13,9 +13,11 @@ execution_context:
 
 section .text
 PIT_IRQ0_handler:
-    call isr_context_save
+    call main_core_dump
     lea rcx, [rel execution_context]
+    sub rsp, 8
     call system_timer_event_handler
+    add rsp, 8
     cmp QWORD [rel context_cr3], 0
     jz .L0
     mov rax, [rel context_cr3]
@@ -26,5 +28,5 @@ PIT_IRQ0_handler:
     ; Sends the EOI to the PIC
     mov al, 0x20
     out 0x20, al
-    call isr_context_restore
+    call main_core_reload
     iretq

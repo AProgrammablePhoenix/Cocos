@@ -14,6 +14,8 @@ int_debug_trap:
     call main_core_dump
     lea rcx, [rel info_msg]
     xor edx, edx
+    sub rsp, 8
     call kpanic
+    add rsp, 8
     iretq
     
