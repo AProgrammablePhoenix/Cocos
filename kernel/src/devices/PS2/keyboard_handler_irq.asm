@@ -12,6 +12,8 @@ PS2_IRQ1_handler:
     call ps2_keyboard_event_handler
     mov al, 0x20
     out 0x20, al
+    sub rsp, 8
     call main_core_reload
+    add rsp, 8
     iretq
    
