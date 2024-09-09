@@ -5,6 +5,8 @@
 #include <mm/VirtualMemory.hpp>
 #include <mm/VirtualMemoryLayout.hpp>
 
+#include <multitasking/Task.hpp>
+
 #include <screen/Log.hpp>
 
 struct VMemMapBlock {
@@ -34,19 +36,6 @@ namespace VirtualMemory {
 
 		static MemoryContext* const userContext = reinterpret_cast<MemoryContext*>(VirtualMemoryLayout::USER_MEMORY_CONTEXT);
 
-		static inline constexpr PTE* getPTAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset) {
-			return reinterpret_cast<PTE*>(PAGING_LOOP_1 | (pml4_offset << 30) | (pdpt_offset << 21) | (pd_offset << 12));
-		}
-		static inline constexpr PDE* getPDAddress(uint64_t pml4_offset, uint64_t pdpt_offset) {
-			return reinterpret_cast<PDE*>(PAGING_LOOP_2 | (pml4_offset << 21) | (pdpt_offset << 12));
-		}
-		static inline constexpr PDPTE* getPDPTAddress(uint64_t pml4_offset) {
-			return reinterpret_cast<PDPTE*>(PAGING_LOOP_3 | (pml4_offset << 12));
-		}
-		static inline constexpr PML4E* getPML4Address() {
-			return reinterpret_cast<PML4E*>(PAGING_LOOP_4);
-		}
-
 		static inline constexpr uint64_t buildVirtualAddress(const VirtualAddress& mapping) {
 			return (((mapping.PML4_offset & 0x100) != 0) ? 0xFFFF000000000000 : 0)
 				| ((uint64_t)mapping.PML4_offset << 39)
@@ -55,14 +44,15 @@ namespace VirtualMemory {
 				| ((uint64_t)mapping.PT_offset << 12)
 				| ((uint64_t)mapping.offset);
 		}
-
+		
+		template<bool usePrimary = true>
 		static inline StatusCode mapPage(uint64_t _physicalAddress, uint64_t _virtualAddress, AccessPrivilege privilege) {
 			if (_physicalAddress % PhysicalMemory::FRAME_SIZE != 0 || _virtualAddress % PhysicalMemory::FRAME_SIZE != 0) {
 				return StatusCode::INVALID_PARAMETER;
 			}
 
 			VirtualAddress mapping = parseVirtualAddress(_virtualAddress);
-			PML4E* pml4e = getPML4EAddress(mapping.PML4_offset);
+			PML4E* pml4e = getPML4EAddress<usePrimary>(mapping.PML4_offset);
 
 			if ((pml4e->raw & PML4E_PRESENT) == 0) {
 				void* page = PhysicalMemory::Allocate();
@@ -74,11 +64,12 @@ namespace VirtualMemory {
 					| PML4E_READWRITE
 					| PML4E_PRESENT;
 
-				PDPTE* pdpt = getPDPTAddress(mapping.PML4_offset);
+				PDPTE* pdpt = getPDPTAddress<usePrimary>(mapping.PML4_offset);
+				__asm__ volatile("invlpg (%0)" :: "r"(pdpt));
 				zeroPage(pdpt);
 			}
 
-			PDPTE* pdpte = getPDPTEAddress(mapping.PML4_offset, mapping.PDPT_offset);
+			PDPTE* pdpte = getPDPTEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset);
 
 			if ((pdpte->raw & PDPTE_PRESENT) == 0) {
 				void* page = PhysicalMemory::Allocate();
@@ -90,11 +81,12 @@ namespace VirtualMemory {
 					| PDPTE_READWRITE
 					| PDPTE_PRESENT;
 
-				PDE* pd = getPDAddress(mapping.PML4_offset, mapping.PDPT_offset);
+				PDE* pd = getPDAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset);
+				__asm__ volatile("invlpg (%0)" :: "r"(pd));
 				zeroPage(pd);
 			}
 
-			PDE* pde = getPDEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+			PDE* pde = getPDEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
 
 			if ((pde->raw & PDE_PRESENT) == 0) {
 				void* page = PhysicalMemory::Allocate();
@@ -106,26 +98,30 @@ namespace VirtualMemory {
 					| PDE_READWRITE
 					| PDE_PRESENT;
 				
-				PTE* pt = getPTAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+				PTE* pt = getPTAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+				__asm__ volatile("invlpg (%0)" :: "r"(pt));
 				zeroPage(pt);
 			}
 
-			PTE* pte = getPTEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
+			PTE* pte = getPTEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
 			pte->raw = (PhysicalMemory::FilterAddress(_physicalAddress) & PTE_ADDRESS)
 				| (privilege == AccessPrivilege::LOW ? PTE_USERMODE : 0)
 				| PTE_READWRITE
 				| PTE_PRESENT;
 
+			__asm__ volatile("invlpg (%0)" :: "r"(_virtualAddress));
+
 			return StatusCode::SUCCESS;
 		}
 
+		template<bool usePrimary = true>
 		static inline StatusCode mapOnDemand(const void* _address, uint64_t pages, AccessPrivilege privilege) {
 			const uint8_t* address = reinterpret_cast<const uint8_t*>(_address);
 
 			for (size_t i = 0; i < pages; ++i) {
 				VirtualAddress mapping = parseVirtualAddress(address);
 
-				PML4E* pml4e = getPML4EAddress(mapping.PML4_offset);
+				PML4E* pml4e = getPML4EAddress<usePrimary>(mapping.PML4_offset);
 
 				if ((pml4e->raw & PML4E_PRESENT) == 0) {
 					void* page = PhysicalMemory::Allocate();
@@ -136,11 +132,12 @@ namespace VirtualMemory {
 						| PML4E_READWRITE
 						| PML4E_PRESENT;
 
-					PDPTE* pdpt = getPDPTAddress(mapping.PML4_offset);
+					PDPTE* pdpt = getPDPTAddress<usePrimary>(mapping.PML4_offset);
+					__asm__ volatile("invlpg (%0)" :: "r"(pdpt));
 					zeroPage(pdpt);
 				}
 
-				PDPTE* pdpte = getPDPTEAddress(mapping.PML4_offset, mapping.PDPT_offset);
+				PDPTE* pdpte = getPDPTEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset);
 
 				if ((pdpte->raw & PDPTE_PRESENT) == 0) {
 					void* page = PhysicalMemory::Allocate();
@@ -151,11 +148,12 @@ namespace VirtualMemory {
 						| PDPTE_READWRITE
 						| PDPTE_PRESENT;
 
-					PDE* pd = getPDAddress(mapping.PML4_offset, mapping.PDPT_offset);
+					PDE* pd = getPDAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset);
+					__asm__ volatile("invlpg (%0)" :: "r"(pd));
 					zeroPage(pd);
 				}
 
-				PDE* pde = getPDEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+				PDE* pde = getPDEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
 
 				if ((pde->raw & PDE_PRESENT) == 0) {
 					void* page = PhysicalMemory::Allocate();
@@ -166,14 +164,17 @@ namespace VirtualMemory {
 						| PDE_READWRITE
 						| PDE_PRESENT;
 
-					PTE* pt = getPTAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+					PTE* pt = getPTAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+					__asm__ volatile("invlpg (%0)" :: "r"(pt));
 					zeroPage(pt);
 				}
 
-				PTE* pte = getPTEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
+				PTE* pte = getPTEAddress<usePrimary>(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
 				pte->raw = NP_ON_DEMAND
 					| (privilege == AccessPrivilege::LOW ? NP_USERMODE : 0)
 					| NP_READWRITE;
+
+				__asm__ volatile("invlpg (%0)" :: "r"(address));
 
 				address += PhysicalMemory::FRAME_SIZE;
 			}
@@ -379,7 +380,8 @@ namespace VirtualMemory {
 
 				if (ctx->availableBlockMemory % PhysicalMemory::FRAME_SIZE == 0 && ctx->availableBlockMemory > PhysicalMemory::FRAME_SIZE) {
 					ctx->availableBlockMemory -= PhysicalMemory::FRAME_SIZE;
-					VirtualAddress blockMemoryAddress = parseVirtualAddress(managementBase + ctx->availableBlockMemory);
+					const uint64_t linearAddress = managementBase + ctx->availableBlockMemory;
+					VirtualAddress blockMemoryAddress = parseVirtualAddress(linearAddress);
 					PTE* blockMemoryPTE = getPTEAddress(
 						blockMemoryAddress.PML4_offset,
 						blockMemoryAddress.PDPT_offset,
@@ -388,6 +390,7 @@ namespace VirtualMemory {
 					);
 					PhysicalMemory::Free(reinterpret_cast<void*>(blockMemoryPTE->raw & PTE_ADDRESS));
 					blockMemoryPTE->raw = 0;
+					__asm__ volatile("invlpg (%0)" :: "r"(linearAddress));
 				}
 			}
 
@@ -428,7 +431,6 @@ namespace VirtualMemory {
 					if ((pml4e->raw & PML4E_PRESENT) == 0 || (pdpte->raw & PDPTE_PRESENT) == 0 || (pde->raw & PDE_PRESENT) == 0 || (pte->raw == 0)) {
 						return StatusCode::INVALID_PARAMETER;
 					}
-					
 				}
 
 				if ((pte->raw & PTE_PRESENT) != 0) {
@@ -436,6 +438,7 @@ namespace VirtualMemory {
 					if (PhysicalMemory::Free(pageAddress) != PhysicalMemory::StatusCode::SUCCESS) {
 						return StatusCode::OUT_OF_MEMORY;
 					}
+					__asm__ volatile("invlpg (%0)" :: "r"(address));
 				}
 				else if ((pte->raw & NP_ON_DEMAND) != 0) {
 					// do stuff with the swap file
@@ -466,20 +469,16 @@ namespace VirtualMemory {
 		}
 	}
 
-	PTE* getPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset, uint64_t pt_offset) {
-		return getPTAddress(pml4_offset, pdpt_offset, pd_offset) + pt_offset;
-	}
+	void UpdateSecondaryRecursiveMapping(void* newAddress) {
+		constexpr VirtualAddress secondaryMapping = parseVirtualAddress(VirtualMemoryLayout::SECONDARY_RECURSIVE_PML4);
+		PML4E* secondaryPML4 = getPML4EAddress(secondaryMapping.PML4_offset);
 
-	PDE* getPDEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset) {
-		return getPDAddress(pml4_offset, pdpt_offset) + pd_offset;
-	}
+		secondaryPML4->raw = PML4E_XD
+			| (PhysicalMemory::FilterAddress(newAddress) & PML4E_ADDRESS)
+			| PML4E_READWRITE
+			| PML4E_PRESENT;
 
-	PDPTE* getPDPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset) {
-		return getPDPTAddress(pml4_offset) + pdpt_offset;
-	}
-
-	PML4E* getPML4EAddress(uint64_t pml4_offset) {
-		return getPML4Address() + pml4_offset;
+		__asm__ volatile("invlpg (%0)" :: "r"(getPML4Address<false>()));
 	}
 
 	StatusCode Setup() {
@@ -495,6 +494,7 @@ namespace VirtualMemory {
 
 		// make the NULL memory page reserved and unusable
 		getPTEAddress(0, 0, 0, 0)->raw = 0;
+		__asm__ volatile("invlpg (%0)" :: "r"((uint64_t)0));
 
 		// set up kernel heap
 		void* basePage = PhysicalMemory::Allocate();
@@ -514,29 +514,64 @@ namespace VirtualMemory {
 		kernelHeapBlockPtr->virtualStart = VirtualMemoryLayout::KERNEL_HEAP;
 		kernelHeapBlockPtr->availablePages = kernelContext.availableMemory / PhysicalMemory::FRAME_SIZE;
 
-		return StatusCode::SUCCESS;
+		// setup a temporary main core dump in case a setup failure happens
+		basePage = PhysicalMemory::Allocate();
+		if (basePage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+		
+		status = mapPage(reinterpret_cast<uint64_t>(basePage), VirtualMemoryLayout::MAIN_CORE_DUMP, AccessPrivilege::HIGH);
+		return status;
 	}
 
-	StatusCode SetupTask() {
-		// set up the kernel stack and the stack guard
-		auto status = mapOnDemand(
-			reinterpret_cast<void*>(VirtualMemoryLayout::KERNEL_STACK + VirtualMemoryLayout::KERNEL_STACK_GUARD_SIZE),
-			(VirtualMemoryLayout::KERNEL_STACK_USABLE_SIZE - PhysicalMemory::FRAME_SIZE) / PhysicalMemory::FRAME_SIZE,
-			AccessPrivilege::HIGH
-		);
+	StatusCode SetupTask(void* CR3) {
+		// setting up recursive paging in the PML4
+		PML4E* vroot = reinterpret_cast<PML4E*>(MapGeneralPage(CR3));
+		if (vroot == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
 
+		(vroot + 509)->raw = (vroot + 510)->raw = PML4E_XD
+			| (PhysicalMemory::FilterAddress(CR3) & PML4E_ADDRESS)
+			| PML4E_READWRITE
+			| PML4E_PRESENT;
+
+		auto status = UnmapGeneralPage(vroot);
 		if (status != StatusCode::SUCCESS) {
 			return status;
 		}
 
+		UpdateSecondaryRecursiveMapping(CR3);
+
+		// copying shared kernel memory
+		for (size_t i = 256; i < 509; ++i) {
+			volatile PML4E* current = getPML4EAddress(i);
+			PML4E* shared = getPML4EAddress<false>(i);
+
+			shared->raw = current->raw;
+		}
+		// clearing entries that are not shared
+		for (size_t i = 0; i < 256; ++i) {
+			getPML4EAddress<false>(i)->raw = 0;
+		}
+		getPML4EAddress<false>(511)->raw = 0;
+
+		// set up the kernel stack and the stack guard
+		status = mapOnDemand<false>(
+			reinterpret_cast<void*>(VirtualMemoryLayout::KERNEL_STACK_USABLE),
+			(VirtualMemoryLayout::KERNEL_STACK_USABLE_SIZE - PhysicalMemory::FRAME_SIZE) / PhysicalMemory::FRAME_SIZE,
+			AccessPrivilege::HIGH
+		);
+
 		VirtualAddress stackGuardMapping = parseVirtualAddress(VirtualMemoryLayout::KERNEL_STACK_GUARD);
-		PTE* stackGuardPTE = getPTEAddress(
+		PTE* stackGuardPTE = getPTEAddress<false>(
 			stackGuardMapping.PML4_offset,
 			stackGuardMapping.PDPT_offset,
 			stackGuardMapping.PD_offset,
 			stackGuardMapping.PT_offset
 		);
 		stackGuardPTE->raw = 0;
+		__asm__ volatile("invlpg (%0)" :: "r"(VirtualMemoryLayout::KERNEL_STACK_GUARD));
 
 		void* stackTop = PhysicalMemory::Allocate();
 		void* stackReserve = PhysicalMemory::Allocate();
@@ -545,7 +580,7 @@ namespace VirtualMemory {
 			return StatusCode::OUT_OF_MEMORY;
 		}
 
-		status = mapPage(
+		status = mapPage<false>(
 			reinterpret_cast<uint64_t>(stackTop),
 			VirtualMemoryLayout::KERNEL_STACK_RESERVE - PhysicalMemory::FRAME_SIZE,
 			AccessPrivilege::HIGH
@@ -554,7 +589,7 @@ namespace VirtualMemory {
 			return status;
 		}
 
-		status = mapPage(
+		status = mapPage<false>(
 			reinterpret_cast<uint64_t>(stackReserve),
 			VirtualMemoryLayout::KERNEL_STACK_RESERVE,
 			AccessPrivilege::HIGH
@@ -564,7 +599,7 @@ namespace VirtualMemory {
 		}
 
 		// set up the process context zone
-		status = mapOnDemand(
+		status = mapOnDemand<false>(
 			reinterpret_cast<void*>(VirtualMemoryLayout::PROCESS_CONTEXT),
 			VirtualMemoryLayout::PROCESS_CONTEXT_SIZE / PhysicalMemory::FRAME_SIZE,
 			AccessPrivilege::HIGH
@@ -574,37 +609,66 @@ namespace VirtualMemory {
 		}
 
 		// allocate two pages for the main and secondary core dump zones
-		VirtualAddress mainDumpMapping = parseVirtualAddress(VirtualMemoryLayout::MAIN_CORE_DUMP);
-		PTE* mainDumpPTE = getPTEAddress(
-			mainDumpMapping.PML4_offset,
-			mainDumpMapping.PDPT_offset,
-			mainDumpMapping.PD_offset,
-			mainDumpMapping.PT_offset
-		);
 		void* mainDumpPage = PhysicalMemory::Allocate();
 		if (mainDumpPage == nullptr) {
 			return StatusCode::OUT_OF_MEMORY;
 		}
-		mainDumpPTE->raw = PTE_XD
-			| (PhysicalMemory::FilterAddress(mainDumpPage) & PTE_ADDRESS)
-			| PTE_READWRITE
-			| PTE_PRESENT;
 
-		VirtualAddress secondaryDumpMapping = parseVirtualAddress(VirtualMemoryLayout::SECONDARY_CORE_DUMP);
-		PTE* secondaryDumpPTE = getPTEAddress(
-			secondaryDumpMapping.PML4_offset,
-			secondaryDumpMapping.PDPT_offset,
-			secondaryDumpMapping.PD_offset,
-			secondaryDumpMapping.PT_offset
+		status = mapPage<false>(
+			reinterpret_cast<uint64_t>(mainDumpPage),
+			VirtualMemoryLayout::MAIN_CORE_DUMP,
+			AccessPrivilege::HIGH
 		);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
+		void* mappedDumpPage = MapGeneralPage(mainDumpPage);
+		if (mappedDumpPage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+		zeroPage(mappedDumpPage);
+
+		status = UnmapGeneralPage(mappedDumpPage);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
 		void* secondaryDumpPage = PhysicalMemory::Allocate();
 		if (secondaryDumpPage == nullptr) {
 			return StatusCode::OUT_OF_MEMORY;
 		}
-		secondaryDumpPTE->raw = PTE_XD
-			| (PhysicalMemory::FilterAddress(secondaryDumpPage) & PTE_ADDRESS)
-			| PTE_READWRITE
-			| PTE_PRESENT;
+
+		status = mapPage<false>(
+			reinterpret_cast<uint64_t>(secondaryDumpPage),
+			VirtualMemoryLayout::SECONDARY_CORE_DUMP,
+			AccessPrivilege::HIGH
+		);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
+		mappedDumpPage = MapGeneralPage(secondaryDumpPage);
+		if (mappedDumpPage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+		zeroPage(mappedDumpPage);
+
+		status = UnmapGeneralPage(mappedDumpPage);
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
+
+		// Map user stack, leaving one extra guard page, usable stack size: 0x1FF000 bytes, or 2 MB - 4 KB = 2,093,056 bytes
+		status = mapOnDemand<false>(
+			reinterpret_cast<void*>(VirtualMemoryLayout::USER_STACK + PhysicalMemory::FRAME_SIZE),
+			(VirtualMemoryLayout::USER_STACK_SIZE - PhysicalMemory::FRAME_SIZE) / PhysicalMemory::FRAME_SIZE,
+			AccessPrivilege::LOW
+		);
+
+		if (status != StatusCode::SUCCESS) {
+			return status;
+		}
 
 		// set up the user memory 
 		void* basePage = PhysicalMemory::Allocate();
@@ -612,20 +676,31 @@ namespace VirtualMemory {
 			return StatusCode::OUT_OF_MEMORY;
 		}
 
-		status = mapPage(reinterpret_cast<uint64_t>(basePage), VirtualMemoryLayout::USER_MEMORY_CONTEXT, AccessPrivilege::HIGH);
+		status = mapPage<false>(reinterpret_cast<uint64_t>(basePage), VirtualMemoryLayout::USER_MEMORY_CONTEXT, AccessPrivilege::HIGH);
 		if (status != StatusCode::SUCCESS) {
 			return status;
 		}
 
-		userContext->availableMemory = VirtualMemoryLayout::USER_MEMORY_SIZE;
-		userContext->availableBlockMemory = PhysicalMemory::FRAME_SIZE 
+		void* vbasePage = MapGeneralPage(basePage);
+		if (vbasePage == nullptr) {
+			return StatusCode::OUT_OF_MEMORY;
+		}
+
+		MemoryContext* newUserContext = reinterpret_cast<MemoryContext*>(vbasePage);
+
+		newUserContext->availableMemory = VirtualMemoryLayout::USER_MEMORY_SIZE - VirtualMemoryLayout::USER_STACK_SIZE;
+		newUserContext->availableBlockMemory = PhysicalMemory::FRAME_SIZE 
 			- sizeof(VMemMapBlock) 
 			- (VirtualMemoryLayout::USER_MEMORY_MANAGEMENT - VirtualMemoryLayout::USER_MEMORY_CONTEXT);
-		userContext->storedBlocks = 1;
+		newUserContext->storedBlocks = 1;
 
-		VMemMapBlock* userMemoryBlockPtr = reinterpret_cast<VMemMapBlock*>(VirtualMemoryLayout::USER_MEMORY_MANAGEMENT);
+		VMemMapBlock* userMemoryBlockPtr = reinterpret_cast<VMemMapBlock*>(
+			reinterpret_cast<uint8_t*>(vbasePage) + (VirtualMemoryLayout::USER_MEMORY_MANAGEMENT - VirtualMemoryLayout::USER_MEMORY_CONTEXT)
+		);
 		userMemoryBlockPtr->virtualStart = VirtualMemoryLayout::USER_MEMORY;
-		userMemoryBlockPtr->availablePages = userContext->availableMemory / PhysicalMemory::FRAME_SIZE;
+		userMemoryBlockPtr->availablePages = newUserContext->availableMemory / PhysicalMemory::FRAME_SIZE;
+
+		UnmapGeneralPage(vbasePage);
 
 		return StatusCode::SUCCESS;
 	}
@@ -684,6 +759,86 @@ namespace VirtualMemory {
 		return FreeCore<AccessPrivilege::LOW>(ptr, pages);
 	}
 
+	void* MapGeneralPage(void* pageAddress) {
+		constexpr uint64_t GP_PAGES = VirtualMemoryLayout::GENERAL_PURPOSE_MAPPINGS_SIZE / PhysicalMemory::FRAME_SIZE;
+
+		uint64_t address = VirtualMemoryLayout::GENERAL_PURPOSE_MAPPINGS;
+
+		for (size_t i = 0; i < GP_PAGES; ++i, address += PhysicalMemory::FRAME_SIZE) {
+			VirtualAddress mapping = parseVirtualAddress(address);
+
+			PDPTE* pdpte = getPDPTEAddress(mapping.PML4_offset, mapping.PDPT_offset);
+
+			if ((pdpte->raw & PDPTE_PRESENT) == 0) {
+				void* page = PhysicalMemory::Allocate();
+				if (page == nullptr) {
+					return nullptr;
+				}
+				pdpte->raw =
+					(PhysicalMemory::FilterAddress(page) & PDPTE_ADDRESS)
+					| PDPTE_READWRITE
+					| PDPTE_PRESENT;
+
+				PDE* pd = getPDAddress(mapping.PML4_offset, mapping.PDPT_offset);
+				zeroPage(pd);
+			}
+
+			PDE* pde = getPDEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+
+			if ((pde->raw & PDE_PRESENT) == 0) {
+				void* page = PhysicalMemory::Allocate();
+				if (page == nullptr) {
+					return nullptr;
+				}
+				pde->raw =
+					(PhysicalMemory::FilterAddress(page) & PDE_ADDRESS)
+					| PDE_READWRITE
+					| PDE_PRESENT;
+
+				PTE* pt = getPTAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+				zeroPage(pt);
+			}
+
+			PTE* pte = getPTEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
+
+			if ((pte->raw & PTE_PRESENT) == 0) {
+				pte->raw = (PhysicalMemory::FilterAddress(pageAddress) & PTE_ADDRESS)
+					| PTE_READWRITE
+					| PTE_PRESENT;
+
+				__asm__ volatile("invlpg (%0)" :: "r"(address));
+				return reinterpret_cast<void*>(address);
+			}
+		}
+
+		return nullptr;
+	}
+
+	StatusCode UnmapGeneralPage(void* vpage) {
+		VirtualAddress mapping = parseVirtualAddress(vpage);
+
+		PML4E* pml4e = getPML4EAddress(mapping.PML4_offset);
+		if ((pml4e->raw & PML4E_PRESENT) == 0) {
+			return StatusCode::INVALID_PARAMETER;
+		}
+
+		PDPTE* pdpte = getPDPTEAddress(mapping.PML4_offset, mapping.PDPT_offset);
+		if ((pdpte->raw & PDPTE_PRESENT) == 0) {
+			return StatusCode::INVALID_PARAMETER;
+		}
+
+		PDE* pde = getPDEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset);
+		if ((pde->raw & PDE_PRESENT) == 0) {
+			return StatusCode::INVALID_PARAMETER;
+		}
+
+		PTE* pte = getPTEAddress(mapping.PML4_offset, mapping.PDPT_offset, mapping.PD_offset, mapping.PT_offset);
+		pte->raw = 0;
+
+		__asm__ volatile("invlpg (%0)" :: "r"(vpage));
+		return StatusCode::SUCCESS;
+	}
+
 	void* MapPCIConfiguration(void* configurationAddress) {
 		constexpr uint64_t PCI_SPACE_PAGES = VirtualMemoryLayout::PCI_CONFIGURATION_SPACE_SIZE / PhysicalMemory::FRAME_SIZE;
 
@@ -733,15 +888,16 @@ namespace VirtualMemory {
 					| PTE_READWRITE
 					| PTE_PRESENT;
 
-				return reinterpret_cast<void*>(buildVirtualAddress(mapping));
+				__asm__ volatile("invlpg (%0)" :: "r"(address));
+				return reinterpret_cast<void*>(address);
 			}
 		}
 
 		return nullptr;
 	}
 
-	StatusCode UnmapPCIConfiguration(void* configurationAddress) {
-		VirtualAddress PCIMapping = parseVirtualAddress(configurationAddress);
+	StatusCode UnmapPCIConfiguration(void* vconfigurationAddress) {
+		VirtualAddress PCIMapping = parseVirtualAddress(vconfigurationAddress);
 
 		PML4E* pml4e = getPML4EAddress(PCIMapping.PML4_offset);
 		if ((pml4e->raw & PML4E_PRESENT) == 0) {
@@ -761,6 +917,7 @@ namespace VirtualMemory {
 		PTE* pte = getPTEAddress(PCIMapping.PML4_offset, PCIMapping.PDPT_offset, PCIMapping.PD_offset, PCIMapping.PT_offset);
 		pte->raw = 0;
 
+		__asm__ volatile("invlpg (%0)" :: "r"(vconfigurationAddress));
 		return StatusCode::SUCCESS;
 	}
 }

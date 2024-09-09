@@ -3,28 +3,31 @@ OUTPUT_ARCH(i386:x86-64)
 ENTRY(kmain)
 
 SECTIONS {
-    . = 0x00000000C0000000;
-    .userembedded ALIGN(0x1000) : {
+    . = 0x0000008000000000;
+    .userembedded ALIGN(CONSTANT(MAXPAGESIZE)) : {
+        userembedded_start = .;
         *(.userembedded*)
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
+        userembedded_end = .;
     }
     . = 0xffff800000000000;
-    .text ALIGN(0x1000) : {
+    .text ALIGN(CONSTANT(MAXPAGESIZE)) : {
         *(.text*)
     }
-    .data ALIGN(0x1000) : {
+    .data ALIGN(CONSTANT(MAXPAGESIZE)) : {
         *(.data*)
     }
-    .rodata ALIGN(0x1000) : {
+    .rodata ALIGN(CONSTANT(MAXPAGESIZE)) : {
         *(.rodata*)
     }
-    .rdata ALIGN(0x1000) : {
+    .rdata ALIGN(CONSTANT(MAXPAGESIZE)) : {
         *(.rdata*)
     }
-    .bss ALIGN(0x1000) : {
+    .bss ALIGN(CONSTANT(MAXPAGESIZE)) : {
         *(.bss*)
         *(COMMON)
     }
-    .init_array : {
+    .init_array ALIGN(CONSTANT(MAXPAGESIZE)) : {
         kernel_init_array_start = .;
         *(.init_array*)
         kernel_init_array_end = .;

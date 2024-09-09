@@ -6,6 +6,7 @@ namespace VirtualMemoryLayout {
 	inline constexpr uint64_t DMA_ZONE					= 0x0000000000000000;
 
 	inline constexpr uint64_t USER_MEMORY				= 0x0000000001000000;
+	inline constexpr uint64_t USER_STACK				= 0x00007FFFFFE00000;
 
 	inline constexpr uint64_t KERNEL_IMAGE				= 0xFFFF800000000000;
 	inline constexpr uint64_t KERNEL_HEAP				= 0xFFFF800020000000;
@@ -21,6 +22,10 @@ namespace VirtualMemoryLayout {
 
 	inline constexpr uint64_t PHYSICAL_MEMORY_MAP		= 0xFFFF80013A000000;
 	inline constexpr uint64_t KERNEL_HEAP_MANAGEMENT	= 0xFFFF8001BA000000;
+
+	inline constexpr uint64_t GENERAL_PURPOSE_MAPPINGS	= 0xFFFF8001BA800000;
+
+	inline constexpr uint64_t SECONDARY_RECURSIVE_PML4	= 0xFFFFFE8000000000;
 
 	inline constexpr uint64_t RECURSIVE_MEMORY_MAPPING	= 0xFFFFFF0000000000;
 
@@ -40,6 +45,7 @@ namespace VirtualMemoryLayout {
 	inline constexpr uint64_t DMA_ZONE_SIZE					= 0x0000000001000000;
 
 	inline constexpr uint64_t USER_MEMORY_SIZE				= 0x00007FFFFF000000;
+	inline constexpr uint64_t USER_STACK_SIZE				= 0x0000000000200000;
 
 	inline constexpr uint64_t KERNEL_IMAGE_SIZE				= 0x0000000020000000;
 	inline constexpr uint64_t KERNEL_HEAP_SIZE				= 0x00000000E0000000;
@@ -55,6 +61,8 @@ namespace VirtualMemoryLayout {
 
 	inline constexpr uint64_t PHYSICAL_MEMORY_MAP_SIZE		= 0x0000000080000000;
 	inline constexpr uint64_t KERNEL_HEAP_MANAGEMENT_SIZE	= 0x0000000000800000;
+
+	inline constexpr uint64_t GENERAL_PURPOSE_MAPPINGS_SIZE = 0x0000000005800000;
 
 	inline constexpr uint64_t RECURSIVE_MEMORY_MAPPING_SIZE	= 0x0000008000000000;
 

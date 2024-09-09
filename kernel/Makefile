@@ -113,6 +113,15 @@ $(mm_asmobjects): objects/mm/%.o: src/mm/%.asm | $(OBJECTSDIR)
 lib/mm.lib: $(mm_cxxobjects) $(mm_cobjects) $(mm_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
+multitasking_cxxsources = src/multitasking/KernelTask.cpp src/multitasking/Task.cpp 
+multitasking_cxxobjects = $(patsubst src/multitasking/%.cpp, objects/multitasking/%.o,$(multitasking_cxxsources))
+$(multitasking_cxxobjects): objects/multitasking/%.o: src/multitasking/%.cpp | $(OBJECTSDIR)
+	@mkdir -p $(@D)
+	@echo Building $@
+	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
+lib/multitasking.lib: $(multitasking_cxxobjects) $(multitasking_cobjects) $(multitasking_asmobjects) | $(LIBSDIR)
+	@echo Creating $@
+	@$(AR) $@ $^
 screen_cxxsources = src/screen/Log.cpp 
 screen_cxxobjects = $(patsubst src/screen/%.cpp, objects/screen/%.o,$(screen_cxxsources))
 $(screen_cxxobjects): objects/screen/%.o: src/screen/%.cpp | $(OBJECTSDIR)
@@ -127,9 +136,9 @@ _cxx_objects = $(patsubst src/%.cpp,objects/%.o,$(_cxx_sources))
 $(_cxx_objects): objects/%.o: src/%.cpp | $(OBJECTSDIR)
 	@echo Building $@
 	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
-kernel.img: $(_cxx_objects) lib/devices.lib lib/interrupts.lib lib/mm.lib lib/screen.lib 
+kernel.img: $(_cxx_objects) lib/devices.lib lib/interrupts.lib lib/mm.lib lib/multitasking.lib lib/screen.lib 
 	@echo Building $@
-	@$(CXXKER) $(CXXFLAGS) -Wl,--start-group -Llib -l:devices.lib -l:interrupts.lib -l:mm.lib -l:screen.lib -o $@ $< -Wl,--end-group
+	@$(CXXKER) $(CXXFLAGS) -Wl,--start-group -Llib -l:devices.lib -l:interrupts.lib -l:mm.lib -l:multitasking.lib -l:screen.lib -o $@ $< -Wl,--end-group
 .PHONY: clean
 clean:
 	@rm -rf lib

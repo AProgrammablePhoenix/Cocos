@@ -36,6 +36,21 @@ namespace {
 }
 
 namespace Panic {
+	[[noreturn]] void Panic(const char* msg) {
+		Log::puts("\n\r------ KERNEL PANIC ------\n\r");
+
+		if (msg != nullptr) {
+			Log::puts("\t\t ");
+			Log::puts(msg);
+			Log::puts("\n\r");
+		}
+
+		__asm__ volatile("cli");
+		while (1) {
+			__asm__ volatile("hlt");
+		}
+	}
+
 	[[noreturn]] void Panic(const char* msg, uint64_t errv) {
 		Log::puts("\n\r------ KERNEL PANIC ------\n\r");
 

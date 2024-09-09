@@ -7,11 +7,24 @@
 #include <mm/VirtualMemoryLayout.hpp>
 
 namespace VirtualMemory {
+	// primary paging loops
+
 	inline constexpr uint64_t PAGING_LOOP_MASK	= (VirtualMemoryLayout::RECURSIVE_MEMORY_MAPPING >> 39) & 0x1FF;
 	inline constexpr uint64_t PAGING_LOOP_1		= VirtualMemoryLayout::RECURSIVE_MEMORY_MAPPING;
 	inline constexpr uint64_t PAGING_LOOP_2		= PAGING_LOOP_1 | (PAGING_LOOP_MASK << 30);
 	inline constexpr uint64_t PAGING_LOOP_3		= PAGING_LOOP_2 | (PAGING_LOOP_MASK << 21);
 	inline constexpr uint64_t PAGING_LOOP_4		= PAGING_LOOP_3 | (PAGING_LOOP_MASK << 12);
+
+	// secondary paging loops
+
+	namespace Secondary {
+		inline constexpr uint64_t PAGING_LOOP_MASK  = (VirtualMemoryLayout::SECONDARY_RECURSIVE_PML4 >> 39) & 0x1FF;
+		inline constexpr uint64_t PAGING_LOOP_1		= VirtualMemoryLayout::SECONDARY_RECURSIVE_PML4;
+		inline constexpr uint64_t PAGING_LOOP_2 = PAGING_LOOP_1 | (PAGING_LOOP_MASK << 30);
+		inline constexpr uint64_t PAGING_LOOP_3 = PAGING_LOOP_2 | (PAGING_LOOP_MASK << 21);
+		inline constexpr uint64_t PAGING_LOOP_4 = PAGING_LOOP_3 | (PAGING_LOOP_MASK << 12);
+	}
+
 
 	// Standard values
 
@@ -137,12 +150,61 @@ namespace VirtualMemory {
 		else {
 			return parseVirtualAddress(reinterpret_cast<uint64_t>(address));
 		}
-	}
+	};
 
-	PTE* getPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset, uint64_t pt_offset);
-	PDE* getPDEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pf_offset);
-	PDPTE* getPDPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset);
-	PML4E* getPML4EAddress(uint64_t pml4_offset);
+	template<bool usePrimary = true>
+	constexpr PTE* getPTAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset) {
+		if constexpr (usePrimary) {
+			return reinterpret_cast<PTE*>(PAGING_LOOP_1 | (pml4_offset << 30) | (pdpt_offset << 21) | (pd_offset << 12));
+		}
+		else {
+			return reinterpret_cast<PTE*>(Secondary::PAGING_LOOP_1 | (pml4_offset << 30) | (pdpt_offset << 21) | (pd_offset << 12));
+		}
+	};
+	template<bool usePrimary = true>
+	constexpr PDE* getPDAddress(uint64_t pml4_offset, uint64_t pdpt_offset) {
+		if constexpr (usePrimary) {
+			return reinterpret_cast<PDE*>(PAGING_LOOP_2 | (pml4_offset << 21) | (pdpt_offset << 12));
+		}
+		else {
+			return reinterpret_cast<PDE*>(Secondary::PAGING_LOOP_2 | (pml4_offset << 21) | (pdpt_offset << 12));
+		}
+	};
+	template<bool usePrimary = true>
+	constexpr PDPTE* getPDPTAddress(uint64_t pml4_offset) {
+		if constexpr (usePrimary) {
+			return reinterpret_cast<PDPTE*>(PAGING_LOOP_3 | (pml4_offset << 12));
+		}
+		else {
+			return reinterpret_cast<PDPTE*>(Secondary::PAGING_LOOP_3 | (pml4_offset << 12));
+		}
+	};
+	template<bool usePrimary = true>
+	constexpr PML4E* getPML4Address() {
+		if constexpr (usePrimary) {
+			return reinterpret_cast<PML4E*>(PAGING_LOOP_4);
+		}
+		else {
+			return reinterpret_cast<PML4E*>(Secondary::PAGING_LOOP_4);
+		}
+	};
+	
+	template<bool usePrimary = true>
+	constexpr PTE* getPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset, uint64_t pt_offset) {
+		return getPTAddress<usePrimary>(pml4_offset, pdpt_offset, pd_offset) + pt_offset;
+	};
+	template<bool usePrimary = true>
+	constexpr PDE* getPDEAddress(uint64_t pml4_offset, uint64_t pdpt_offset, uint64_t pd_offset) {
+		return getPDAddress<usePrimary>(pml4_offset, pdpt_offset) + pd_offset;
+	};
+	template<bool usePrimary = true>
+	constexpr PDPTE* getPDPTEAddress(uint64_t pml4_offset, uint64_t pdpt_offset) {
+		return getPDPTAddress<usePrimary>(pml4_offset) + pdpt_offset;
+	};
+	template<bool usePrimary = true>
+	constexpr PML4E* getPML4EAddress(uint64_t pml4_offset) {
+		return getPML4Address<usePrimary>() + pml4_offset;
+	};
 
 	template<AddressType T> void zeroPage(T address) {
 		if constexpr (std::is_same_v<T, uint64_t>) {
@@ -154,10 +216,12 @@ namespace VirtualMemory {
 		else {
 			zeroPage(reinterpret_cast<uint64_t>(address));
 		}
-	}
+	};
+
+	void UpdateSecondaryRecursiveMapping(void* newAddress);
 
 	StatusCode Setup();
-	StatusCode SetupTask();
+	StatusCode SetupTask(void* CR3);
 
 	void* AllocateDMA(uint64_t pages);
 	void* AllocateKernelHeap(uint64_t pages);
@@ -168,6 +232,9 @@ namespace VirtualMemory {
 	StatusCode FreeKernelHeap(void* ptr, uint64_t pages);
 	StatusCode FreeUserPages(void* ptr, uint64_t pages);
 
+	void* MapGeneralPage(void* page);
+	StatusCode UnmapGeneralPage(void* vpage);
+
 	void* MapPCIConfiguration(void* configurationAddress);
-	StatusCode UnmapPCIConfiguration(void* configurationAddress);
+	StatusCode UnmapPCIConfiguration(void* vconfigurationAddress);
 }

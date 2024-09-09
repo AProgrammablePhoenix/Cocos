@@ -17,6 +17,9 @@
 #include <mm/VirtualMemory.hpp>
 #include <mm/VirtualMemoryLayout.hpp>
 
+#include <multitasking/Task.hpp>
+#include <multitasking/KernelTask.hpp>
+
 #include <screen/Log.hpp>
 
 extern uint8_t kernel_init_array_start[];
@@ -86,6 +89,14 @@ namespace {
     }
 }
 
+__attribute__((section(".userembedded"))) void idleTask(void) {
+    while (1);
+}
+
+__attribute__((section(".userembedded"))) void idleTask2(void) {
+    while (1);
+}
+
 extern "C" int kmain() {
     __asm__ volatile("cli");
 
@@ -104,11 +115,23 @@ extern "C" int kmain() {
     SetupVirtualMemory();
     Log::puts("VMM Initialized\n\r");
 
-    Interrupts::register_irq(0, &Interrupts::SystemTimer::PIT_IRQ0_handler, 1);
+    Interrupts::register_irq(0, &Interrupts::SystemTimer::PIT_IRQ0_handler, 0);
     Interrupts::PIC::initialize_pic();
     Interrupts::PIT::initialize_pit();
 
     SetupPS2Keyboard();
+
+    auto status = Multitasking::loadKernelTask(reinterpret_cast<void*>(&idleTask));
+    if (status != Multitasking::StatusCode::SUCCESS) {
+        Panic::Panic("Failed to load kernel task\n\r");
+    }
+
+    status = Multitasking::loadKernelTask(reinterpret_cast<void*>(&idleTask2));
+    if (status != Multitasking::StatusCode::SUCCESS) {
+        Panic::Panic("Failed to load kernel task\n\r");
+    }
+
+    __asm__ volatile("sti");
 
     while (1);
 }

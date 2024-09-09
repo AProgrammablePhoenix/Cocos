@@ -17,7 +17,9 @@ int_page_error:
     xchg [rel temp], rax
     call main_core_dump
     mov rcx, [rel temp]
+    sub rsp, 8
     call page_fault_handler
+    add rsp, 8
     call main_core_reload
     iretq
     

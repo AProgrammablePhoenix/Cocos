@@ -34,7 +34,7 @@ namespace {
                 || (pdpte->raw & VirtualMemory::PDPTE_PRESENT) == 0
                 || (pde->raw & VirtualMemory::PDE_PRESENT) == 0
                 || pte->raw == 0) {
-                Panic::Panic("WHAT DO YOU THINK WOULD HAPPEN??\n\r", errv);
+                Panic::Panic("WHAT DID YOU THINK WOULD HAPPEN??\n\r", errv);
             }
             
             uint64_t PRESENT = VirtualMemory::PTE_PRESENT;
