@@ -3,10 +3,10 @@
 acpi/
 debugger/
 ImageTools/
-/*.txt
-/*.py
-*.EFI
-*.exe
-*.img
+**/*.txt
+**/*.py
+**/*.EFI
+**/*.exe
+**/*.img
 **/objects/
 **/lib
