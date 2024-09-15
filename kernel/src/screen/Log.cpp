@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include <mm/VirtualMemoryLayout.hpp>
+#include <screen/Framebuffer.hpp>
 #include <screen/Log.hpp>
 
 namespace {
@@ -81,12 +82,12 @@ namespace {
 
 namespace Log {
 	void Setup() {
-		const uint64_t mmap_size = *reinterpret_cast<uint64_t*>(VirtualMemoryLayout::OS_BOOT_DATA + VirtualMemoryLayout::BOOT_MEMORY_MAP_SIZE_OFFSET);
+		Framebuffer::Info info = Framebuffer::Setup();
 
-		screenInfo.width = *reinterpret_cast<uint32_t*>(VirtualMemoryLayout::OS_BOOT_DATA + mmap_size + VirtualMemoryLayout::BOOT_FRAMEBUFFER_XRES_OFFSET);
-		screenInfo.height = *reinterpret_cast<uint32_t*>(VirtualMemoryLayout::OS_BOOT_DATA + mmap_size + VirtualMemoryLayout::BOOT_FRAMEBUFFER_YRES_OFFSET);
-		screenInfo.ppsl = *reinterpret_cast<uint32_t*>(VirtualMemoryLayout::OS_BOOT_DATA + mmap_size + VirtualMemoryLayout::BOOT_FRAMEBUFFER_PPSL_OFFSET);
-		screenInfo.framebuffer = *reinterpret_cast<uint32_t**>(VirtualMemoryLayout::OS_BOOT_DATA + mmap_size + VirtualMemoryLayout::BOOT_FRAMEBUFFER_ADDRESS_OFFSET);
+		screenInfo.width = info.XResolution;
+		screenInfo.height = info.YResolution;
+		screenInfo.ppsl = info.PixelsPerScanLine;
+		screenInfo.framebuffer = info.Address;
 
 		screenContext.x = 0;
 		screenContext.y = 0;

@@ -83,13 +83,13 @@ $(devices_asmobjects): objects/devices/%.o: src/devices/%.asm | $(OBJECTSDIR)
 lib/devices.lib: $(devices_cxxobjects) $(devices_cobjects) $(devices_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-interrupts_cxxsources = src/interrupts/CoreDump.cpp src/interrupts/idt.cpp src/interrupts/KernelPanic.cpp src/interrupts/SystemTimer.cpp src/interrupts/core/PageFault.cpp 
+interrupts_cxxsources = src/interrupts/CoreDump.cpp src/interrupts/idt.cpp src/interrupts/KernelPanic.cpp src/interrupts/SystemTimer.cpp src/interrupts/core/PageFault.cpp src/interrupts/software/Framebuffer.cpp 
 interrupts_cxxobjects = $(patsubst src/interrupts/%.cpp, objects/interrupts/%.o,$(interrupts_cxxsources))
 $(interrupts_cxxobjects): objects/interrupts/%.o: src/interrupts/%.cpp | $(OBJECTSDIR)
 	@mkdir -p $(@D)
 	@echo Building $@
 	@$(CXXNOLINK) $(CXXFLAGS) $(CFASTNOSSE) -o $@ -c $<
-interrupts_asmsources = src/interrupts/CoreDumpSetup.asm src/interrupts/gpr_isr_saving.asm src/interrupts/idt_load.asm src/interrupts/pic.asm src/interrupts/pit.asm src/interrupts/system_timer_irq.asm src/interrupts/core/align_error.asm src/interrupts/core/bound_error.asm src/interrupts/core/breakpoint_trap.asm src/interrupts/core/controlprotection_error.asm src/interrupts/core/coprocoseg_error.asm src/interrupts/core/debug_trap.asm src/interrupts/core/device_error.asm src/interrupts/core/dfault_abort.asm src/interrupts/core/divide_error.asm src/interrupts/core/gp_error.asm src/interrupts/core/hypervirt_error.asm src/interrupts/core/invalidop_error.asm src/interrupts/core/invalidtss_error.asm src/interrupts/core/machine_error.asm src/interrupts/core/nmi_error.asm src/interrupts/core/overflow_trap.asm src/interrupts/core/page_error.asm src/interrupts/core/security_error.asm src/interrupts/core/segpresence_error.asm src/interrupts/core/simd_error.asm src/interrupts/core/stack_error.asm src/interrupts/core/virt_error.asm src/interrupts/core/vmmcom_error.asm src/interrupts/core/x87fp_error.asm 
+interrupts_asmsources = src/interrupts/CoreDumpSetup.asm src/interrupts/idt_load.asm src/interrupts/pic.asm src/interrupts/pit.asm src/interrupts/system_timer_irq.asm src/interrupts/core/align_error.asm src/interrupts/core/bound_error.asm src/interrupts/core/breakpoint_trap.asm src/interrupts/core/controlprotection_error.asm src/interrupts/core/coprocoseg_error.asm src/interrupts/core/debug_trap.asm src/interrupts/core/device_error.asm src/interrupts/core/dfault_abort.asm src/interrupts/core/divide_error.asm src/interrupts/core/gp_error.asm src/interrupts/core/hypervirt_error.asm src/interrupts/core/invalidop_error.asm src/interrupts/core/invalidtss_error.asm src/interrupts/core/machine_error.asm src/interrupts/core/nmi_error.asm src/interrupts/core/overflow_trap.asm src/interrupts/core/page_error.asm src/interrupts/core/security_error.asm src/interrupts/core/segpresence_error.asm src/interrupts/core/simd_error.asm src/interrupts/core/stack_error.asm src/interrupts/core/virt_error.asm src/interrupts/core/vmmcom_error.asm src/interrupts/core/x87fp_error.asm src/interrupts/software/swFramebuffer.asm 
 interrupts_asmobjects = $(patsubst src/interrupts/%.asm, objects/interrupts/%.o,$(interrupts_asmsources))
 $(interrupts_asmobjects): objects/interrupts/%.o: src/interrupts/%.asm | $(OBJECTSDIR)
 	@mkdir -p $(@D)
@@ -122,7 +122,7 @@ $(multitasking_cxxobjects): objects/multitasking/%.o: src/multitasking/%.cpp | $
 lib/multitasking.lib: $(multitasking_cxxobjects) $(multitasking_cobjects) $(multitasking_asmobjects) | $(LIBSDIR)
 	@echo Creating $@
 	@$(AR) $@ $^
-screen_cxxsources = src/screen/Log.cpp 
+screen_cxxsources = src/screen/Framebuffer.cpp src/screen/Log.cpp 
 screen_cxxobjects = $(patsubst src/screen/%.cpp, objects/screen/%.o,$(screen_cxxsources))
 $(screen_cxxobjects): objects/screen/%.o: src/screen/%.cpp | $(OBJECTSDIR)
 	@mkdir -p $(@D)

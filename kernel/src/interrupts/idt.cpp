@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include <interrupts/Core.hpp>
+#include <interrupts/Software.hpp>
 #include <interrupts/idt.hpp>
 
 struct IDTDescriptor {
@@ -108,6 +109,8 @@ extern "C" void Interrupts::kernel_idt_setup() {
 	registerCoreInterrupt(28, &Interrupts::Core::int_hypervirt_error,			INTDPL::DPL0, INTTYPE::EXCEPTION);
 	registerCoreInterrupt(29, &Interrupts::Core::int_vmmcom_error,				INTDPL::DPL0, INTTYPE::EXCEPTION);
 	registerCoreInterrupt(30, &Interrupts::Core::int_security_error,			INTDPL::DPL0, INTTYPE::EXCEPTION);
+
+	registerCoreInterrupt(0x81, &Interrupts::Software::swFramebufferManager, 	INTDPL::DPL3, INTTYPE::TRAP);
 }
 
 extern "C" void Interrupts::register_irq(unsigned int irqLine, void(*handler)(void), unsigned int isTrap) {
